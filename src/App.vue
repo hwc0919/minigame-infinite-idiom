@@ -37,7 +37,8 @@ const guesses = ref<string[]>([]);
 const currentInput = ref('');
 const gameWon = ref(false);
 const guessedList = ref<string[]>([]);
-const elapsedTime = ref('');
+const elapsedTimeStr = ref('');
+const elapsedTime = ref(0);
 const startTime = ref(0);
 const showCongrats = ref(false);
 
@@ -73,7 +74,8 @@ const startNewIdiom = () => {
     guesses.value = [];
     currentInput.value = '';
     gameWon.value = false;
-    elapsedTime.value = '';
+    elapsedTimeStr.value = '';
+    elapsedTime.value = 0;
     saveGameState();
 };
 
@@ -100,7 +102,8 @@ const initGame = () => {
                 const seconds = Math.floor((Date.now() - startTime.value) / 1000);
                 const minutes = Math.floor(seconds / 60);
                 const remainingSeconds = seconds % 60;
-                elapsedTime.value = minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
+                elapsedTime.value = seconds;
+                elapsedTimeStr.value = minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
             }
         }
     } else {
@@ -384,7 +387,8 @@ const handleSubmit = () => {
         const seconds = Math.floor((endTime - startTime.value) / 1000);
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
-        elapsedTime.value = minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
+        elapsedTime.value = seconds;
+        elapsedTimeStr.value = minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
 
         if (!guessedList.value.includes(answer.value)) {
             guessedList.value.push(answer.value);
@@ -403,6 +407,7 @@ const handleSubmit = () => {
 <template>
     <div class="game">
         <h1>猜成语</h1>
+        <div v-if="guessedList.length > 0" class="progress">（你已完成 {{ guessedList.length }} 题）</div>
 
         <div class="guesses">
             <div v-for="(guess, guessIndex) in guessesWithPinyin" :key="guessIndex" class="guess-row">
@@ -424,7 +429,7 @@ const handleSubmit = () => {
 
         <div v-if="gameWon" class="message">
             🎉 恭喜你猜对了！
-            <div>用时：{{ elapsedTime }}</div>
+            <div>用时：{{ elapsedTimeStr }}<span v-if="elapsedTime === 0">(你一定开挂了!)</span></div>
             <button @click="startNewIdiom">下一题</button>
         </div>
 
@@ -445,7 +450,13 @@ const handleSubmit = () => {
 
 h1 {
     color: #333;
-    margin-bottom: 30px;
+    margin-bottom: 10px;
+}
+
+.progress {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 20px;
 }
 
 .guesses {
@@ -545,6 +556,7 @@ button:hover {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -555,6 +567,7 @@ button:hover {
         transform: scale(0.5);
         opacity: 0;
     }
+
     to {
         transform: scale(1);
         opacity: 1;
@@ -562,9 +575,12 @@ button:hover {
 }
 
 @keyframes bounce {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translateY(0);
     }
+
     50% {
         transform: translateY(-20px);
     }
