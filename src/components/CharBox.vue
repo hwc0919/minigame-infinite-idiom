@@ -5,20 +5,32 @@ interface PinyinParts {
     tone: string;
 }
 
+interface PinyinMatch {
+    initial: boolean;
+    final: boolean;
+    tone: boolean;
+}
+
+interface CharMatch {
+    char: boolean;
+    pinyin: PinyinMatch;
+}
+
 interface Props {
     char: string;
     pinyin: PinyinParts;
-    status: 'correct' | 'present' | 'absent';
+    match: CharMatch;
 }
 
 defineProps<Props>();
 </script>
 
 <template>
-    <div class="char-box" :class="status">
+    <div class="char-box" :class="{ correct: match.char }">
         <div class="pinyin">
-            <span class="initial">{{ pinyin.initial }}</span><span class="final">{{ pinyin.final }}</span><span
-                class="tone">{{ pinyin.tone }}</span>
+            <span class="initial" :class="{ correct: match.pinyin.initial }">{{ pinyin.initial }}</span><span
+                class="final" :class="{ correct: match.pinyin.final }">{{ pinyin.final }}</span><span class="tone"
+                :class="{ correct: match.pinyin.tone }">{{ pinyin.tone }}</span>
         </div>
         <div class="char">{{ char }}</div>
     </div>
@@ -42,17 +54,26 @@ defineProps<Props>();
     background: #00bcd4;
 }
 
-.char-box.correct .pinyin,
+.char-box.correct .pinyin {
+    color: white;
+}
+
 .char-box.correct .char {
     color: white;
 }
 
-.char-box.present .char {
-    color: #ff9800;
+.pinyin .initial.correct,
+.pinyin .final.correct,
+.pinyin .tone.correct {
+    color: #00bcd4;
+    font-weight: bold;
 }
 
-.char-box.absent {
-    background: #e0e0e0;
+.char-box.correct .pinyin .initial.correct,
+.char-box.correct .pinyin .final.correct,
+.char-box.correct .pinyin .tone.correct {
+    color: white;
+    font-weight: bold;
 }
 
 .pinyin {

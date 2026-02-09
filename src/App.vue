@@ -132,7 +132,7 @@ const restart = () => {
         <div class="guesses">
             <div v-for="(guess, guessIndex) in guessesWithPinyin" :key="guessIndex" class="guess-row">
                 <CharBox v-for="(char, charIndex) in guess.chars" :key="charIndex" :char="char"
-                    :pinyin="guess.pinyins[charIndex]" :status="getCharStatus(char, charIndex)" />
+                    :pinyin="guess.pinyins[charIndex]" :match="guess.matches[charIndex]" />
             </div>
         </div>
 
