@@ -39,6 +39,7 @@ const gameWon = ref(false);
 const guessedList = ref<string[]>([]);
 const elapsedTime = ref('');
 const startTime = ref(0);
+const showCongrats = ref(false);
 
 const saveGameState = () => {
     const state: GameState = {
@@ -49,26 +50,38 @@ const saveGameState = () => {
     sessionStorage.setItem('gameState', JSON.stringify(state));
 };
 
-const getRandomIdiom = (): string => {
+const getRandomIdiom = (): string | null => {
     const availableIdioms = idioms.filter(idiom => !guessedList.value.includes(idiom));
 
     if (availableIdioms.length === 0) {
-        guessedList.value = [];
-        localStorage.setItem('guessedIdioms', '[]');
-        return idioms[Math.floor(Math.random() * idioms.length)]!;
+        return null;
     }
 
     return availableIdioms[Math.floor(Math.random() * availableIdioms.length)]!;
 };
 
 const startNewIdiom = () => {
-    answer.value = getRandomIdiom();
+    const newIdiom = getRandomIdiom();
+
+    if (newIdiom === null) {
+        showCongrats.value = true;
+        return;
+    }
+
+    answer.value = newIdiom;
     startTime.value = 0;
     guesses.value = [];
     currentInput.value = '';
     gameWon.value = false;
     elapsedTime.value = '';
     saveGameState();
+};
+
+const resetAll = () => {
+    guessedList.value = [];
+    localStorage.setItem('guessedIdioms', '[]');
+    showCongrats.value = false;
+    startNewIdiom();
 };
 
 const initGame = () => {
@@ -80,7 +93,7 @@ const initGame = () => {
         answer.value = state.currentIdiom;
         startTime.value = state.startTime;
         guesses.value = state.guesses;
-        
+
         if (guesses.value.length > 0 && guesses.value[guesses.value.length - 1] === answer.value) {
             gameWon.value = true;
             if (startTime.value > 0) {
@@ -398,6 +411,17 @@ const handleSubmit = () => {
             </div>
         </div>
 
+        <div v-if="showCongrats" class="congrats-modal">
+            <div class="congrats-content">
+                <div class="congrats-icon">🎉</div>
+                <h2>恭喜你完成了所有挑战！</h2>
+                <p>是否重新开始？</p>
+                <div class="congrats-buttons">
+                    <button @click="resetAll">重新开始</button>
+                </div>
+            </div>
+        </div>
+
         <div v-if="gameWon" class="message">
             🎉 恭喜你猜对了！
             <div>用时：{{ elapsedTime }}</div>
@@ -468,5 +492,81 @@ button:hover {
     font-size: 20px;
     color: #4caf50;
     font-weight: bold;
+}
+
+.congrats-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.congrats-content {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    max-width: 400px;
+    animation: scaleIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.congrats-icon {
+    font-size: 80px;
+    animation: bounce 1s infinite;
+}
+
+.congrats-content h2 {
+    color: #333;
+    margin: 20px 0 10px;
+    font-size: 24px;
+}
+
+.congrats-content p {
+    color: #666;
+    margin-bottom: 30px;
+    font-size: 18px;
+}
+
+.congrats-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-20px);
+    }
 }
 </style>
