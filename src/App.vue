@@ -51,6 +51,11 @@ const saveGameState = () => {
     sessionStorage.setItem('gameState', JSON.stringify(state));
 };
 
+const seededRandom = (seed: number) => {
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+};
+
 const getRandomIdiom = (): string | null => {
     const availableIdioms = idioms.filter(idiom => !guessedList.value.includes(idiom));
 
@@ -58,7 +63,7 @@ const getRandomIdiom = (): string | null => {
         return null;
     }
 
-    return availableIdioms[Math.floor(Math.random() * availableIdioms.length)]!;
+    return availableIdioms[Math.floor(seededRandom(Date.now()) * availableIdioms.length)]!;
 };
 
 const startNewIdiom = () => {
