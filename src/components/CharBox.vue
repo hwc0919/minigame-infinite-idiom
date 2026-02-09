@@ -1,20 +1,8 @@
 <script setup lang="ts">
-interface PinyinParts {
-    initial: string;
-    final: string;
-    tone: string;
-}
-
-interface PinyinMatch {
-    initial: number;
-    final: number;
-    tone: number;
-}
-
-interface CharMatch {
-    char: number;
-    pinyin: PinyinMatch;
-}
+import {
+    type PinyinParts,
+    type CharMatch,
+} from '../idiom'
 
 interface Props {
     char: string;
