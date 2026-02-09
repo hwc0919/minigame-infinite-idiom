@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { pinyin } from 'pinyin-pro';
 import CharBox from './components/CharBox.vue';
+import CreateQuizModal from './components/CreateQuizModal.vue';
 import { idioms } from './assets/idioms';
 
 interface PinyinParts {
@@ -49,6 +50,7 @@ const elapsedTimeStr = ref('');
 const elapsedTime = ref(0);
 const startTime = ref(0);
 const showCongrats = ref(false);
+const showCreateQuiz = ref(false);
 
 const MAX_ATTEMPTS = 10;
 const KEY = 'idiom2026';
@@ -550,13 +552,24 @@ const shareWebpage = async () => {
     alert('网页链接已复制到剪贴板！');
 };
 
+const openCreateQuiz = () => {
+    showCreateQuiz.value = true;
+};
+
+const closeCreateQuiz = () => {
+    showCreateQuiz.value = false;
+};
+
 </script>
 
 <template>
     <div class="game">
         <div class="header">
             <h1>猜成语</h1>
-            <button @click="shareWebpage" class="share-btn" title="分享网页">🔗</button>
+            <div class="header-buttons">
+                <button @click="openCreateQuiz" class="share-btn" title="手动出题">✏️</button>
+                <button @click="shareWebpage" class="share-btn" title="分享网页">🔗</button>
+            </div>
         </div>
         <div v-if="guessedList.length > 0" class="progress">（你已完成 {{ guessedList.length }} 题）</div>
 
@@ -571,6 +584,8 @@ const shareWebpage = async () => {
                     :match="{ char: 0, pinyin: { initial: 0, final: 0, tone: 0 } }" />
             </div>
         </div>
+
+        <CreateQuizModal :show="showCreateQuiz" :encryptFn="encryptIdiom" @close="closeCreateQuiz" />
 
         <div v-if="showCongrats" class="congrats-modal">
             <div class="congrats-content">
@@ -627,6 +642,11 @@ const shareWebpage = async () => {
 h1 {
     color: #333;
     margin: 0;
+}
+
+.header-buttons {
+    display: flex;
+    gap: 8px;
 }
 
 .share-btn {
