@@ -26,11 +26,17 @@ defineProps<Props>();
 </script>
 
 <template>
-    <div class="char-box" :class="{ correct: match.char === 2 }">
+    <div class="char-box" :class="{ correct: match.char === 2, present: match.char === 1 }">
         <div class="pinyin">
-            <span class="initial" :class="{ correct: match.pinyin.initial === 2 }">{{ pinyin.initial }}</span><span
-                class="final" :class="{ correct: match.pinyin.final === 2 }">{{ pinyin.final }}</span><span class="tone"
-                :class="{ correct: match.pinyin.tone === 2 }">{{ pinyin.tone }}</span>
+            <span class="initial" :class="{ correct: match.pinyin.initial === 2, present: match.pinyin.initial === 1 }">
+                {{ pinyin.initial }}
+            </span>
+            <span class="final" :class="{ correct: match.pinyin.final === 2, present: match.pinyin.final === 1 }">
+                {{ pinyin.final }}
+            </span>
+            <span class="tone" :class="{ correct: match.pinyin.tone === 2, present: match.pinyin.tone === 1 }">
+                {{ pinyin.tone }}
+            </span>
         </div>
         <div class="char">{{ char }}</div>
     </div>
@@ -54,12 +60,20 @@ defineProps<Props>();
     background: #00bcd4;
 }
 
+.char-box.present {
+    background: #e0e0e0;
+}
+
 .char-box.correct .pinyin {
     color: white;
 }
 
 .char-box.correct .char {
     color: white;
+}
+
+.char-box.present .char {
+    color: #ff9800;
 }
 
 .pinyin .initial.correct,
@@ -69,11 +83,25 @@ defineProps<Props>();
     font-weight: bold;
 }
 
+.pinyin .initial.present,
+.pinyin .final.present,
+.pinyin .tone.present {
+    color: #ff9800;
+    font-weight: bold;
+}
+
 .char-box.correct .pinyin .initial.correct,
 .char-box.correct .pinyin .final.correct,
 .char-box.correct .pinyin .tone.correct {
     color: white;
     font-weight: bold;
+}
+
+.char-box.correct .pinyin .initial.present,
+.char-box.correct .pinyin .final.present,
+.char-box.correct .pinyin .tone.present {
+    color: white;
+    font-weight: normal;
 }
 
 .pinyin {
