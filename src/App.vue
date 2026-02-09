@@ -40,7 +40,7 @@ const saveGameState = () => {
         startTime: startTime.value,
         guesses: guesses.value
     };
-    sessionStorage.setItem('gameState', JSON.stringify(state));
+    localStorage.setItem('gameState', JSON.stringify(state));
 };
 
 const seededRandom = (seed: number) => {
@@ -254,7 +254,7 @@ const initGame = async () => {
         }
     }
 
-    const savedState = sessionStorage.getItem('gameState');
+    const savedState = localStorage.getItem('gameState');
 
     if (savedState) {
         try {
@@ -264,6 +264,7 @@ const initGame = async () => {
             guesses.value = state.guesses;
 
             const isGameWon = guesses.value.length > 0 && guesses.value[guesses.value.length - 1] === answer.value;
+            const isGameFailed = guesses.value.length >= MAX_ATTEMPTS && !isGameWon;
 
             console.log('Restored game state:', {
                 currentIdiom: state.currentIdiom,
@@ -272,7 +273,7 @@ const initGame = async () => {
                 isGameWon
             });
 
-            if (!isGameWon && !idioms.includes(answer.value)) {
+            if (!isGameWon && !isGameFailed && !idioms.includes(answer.value)) {
                 console.log("start new!!!");
                 startNewIdiom();
                 return;
@@ -287,6 +288,10 @@ const initGame = async () => {
                     elapsedTime.value = seconds;
                     elapsedTimeStr.value = minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
                 }
+            }
+
+            if (isGameFailed) {
+                gameFailed.value = true;
             }
         } catch {
             startNewIdiom();
