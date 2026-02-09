@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import CharBox from './components/CharBox.vue';
 import CreateQuizModal from './components/CreateQuizModal.vue';
+import ProgressNav from './components/ProgressNav.vue';
 import { idioms } from './assets/idioms';
 import {
     type GameState,
@@ -14,6 +15,9 @@ import {
     emptyMatch,
     compareIdioms
 } from './idiom';
+import { useCustomMode } from './composables/useCustomMode';
+
+const customMode = useCustomMode();
 
 const answer = ref('');
 const guesses = ref<string[]>([]);
@@ -55,16 +59,42 @@ const getRandomIdiom = (): string | null => {
 };
 
 const startNewIdiom = () => {
-    console.log("start new idiom!!!");
-    const newIdiom = getRandomIdiom();
-
-    if (newIdiom === null) {
-        console.log("no more idiom available!!!");
-        showCongrats.value = true;
-        return;
+    if (customMode.isActive.value) {
+        // 如果在查看其他题目，先返回当前题目
+        if (customMode.viewIndex.value !== customMode.currentIndex.value) {
+            customMode.jumpToIdiom(customMode.currentIndex.value);
+            const result = customMode.results.value[customMode.currentIndex.value];
+            answer.value = customMode.currentIdiom.value!;
+            guesses.value = result?.guesses || [];
+            gameWon.value = result?.won || false;
+            gameFailed.value = result?.completed && !result.won;
+            elapsedTime.value = result?.time || 0;
+            if (result?.time) {
+                const minutes = Math.floor(result.time / 60);
+                const seconds = result.time % 60;
+                elapsedTimeStr.value = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
+            } else {
+                elapsedTimeStr.value = '';
+            }
+            currentInput.value = '';
+            startTime.value = 0;
+            return;
+        }
+        
+        if (!customMode.nextIdiom()) {
+            showCongrats.value = true;
+            return;
+        }
+        answer.value = customMode.currentIdiom.value!;
+    } else {
+        const newIdiom = getRandomIdiom();
+        if (newIdiom === null) {
+            showCongrats.value = true;
+            return;
+        }
+        answer.value = newIdiom;
     }
 
-    answer.value = newIdiom;
     startTime.value = 0;
     guesses.value = [];
     currentInput.value = '';
@@ -72,7 +102,10 @@ const startNewIdiom = () => {
     gameFailed.value = false;
     elapsedTimeStr.value = '';
     elapsedTime.value = 0;
-    saveGameState();
+
+    if (!customMode.isActive.value) {
+        saveGameState();
+    }
 };
 
 const saveToHistory = (won: boolean) => {
@@ -87,6 +120,9 @@ const saveToHistory = (won: boolean) => {
 };
 
 const resetAll = () => {
+    if (customMode.isActive.value) {
+        customMode.exit();
+    }
     guessedList.value = [];
     guessedHistory.value = {};
     localStorage.setItem('guessedIdioms', '[]');
@@ -95,13 +131,88 @@ const resetAll = () => {
     startNewIdiom();
 };
 
-const initGame = () => {
+const handleJumpTo = (index: number) => {
+    // 跳转前先保存当前题目进度（不改变完成状态）
+    if (customMode.isActive.value && customMode.viewIndex.value === customMode.currentIndex.value && guesses.value.length > 0 && !gameWon.value && !gameFailed.value) {
+        customMode.saveCurrentProgress(guesses.value);
+    }
+    
+    customMode.jumpToIdiom(index);
+    const result = customMode.results.value[index];
+    answer.value = customMode.currentIdiom.value!;
+    guesses.value = result?.guesses || [];
+    
+    // 正确判断游戏状态
+    if (result?.completed) {
+        gameWon.value = result.won;
+        gameFailed.value = !result.won;
+    } else {
+        gameWon.value = false;
+        gameFailed.value = false;
+    }
+    
+    elapsedTime.value = result?.time || 0;
+    if (result?.time) {
+        const minutes = Math.floor(result.time / 60);
+        const seconds = result.time % 60;
+        elapsedTimeStr.value = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
+    } else {
+        elapsedTimeStr.value = '';
+    }
+    currentInput.value = '';
+    startTime.value = 0;
+};
+
+const exitCustomMode = () => {
+    customMode.exit();
+    showCongrats.value = false;
+    startNewIdiom();
+};
+
+const initGame = async () => {
     guessedList.value = JSON.parse(localStorage.getItem('guessedIdioms') || '[]');
     guessedHistory.value = JSON.parse(localStorage.getItem('guessedHistory') || '{}');
 
-    // Check for shared idiom in URL hash
+    // Check for URL hash
     const hash = window.location.hash.slice(1);
     const hashParams = new URLSearchParams(hash);
+
+    // Check for custom mode (multiple idioms)
+    const customIdioms = hashParams.get('idioms');
+    if (customIdioms) {
+        try {
+            const encrypted = JSON.parse(decodeURIComponent(customIdioms));
+            const idiomsList = encrypted.map(decryptIdiom);
+            const encoder = new TextEncoder();
+            const data = encoder.encode(encrypted.join(','));
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const quizId = hashArray.map(b => {
+                const hex = b.toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            }).join('').slice(0, 16);
+            
+            await customMode.init(idiomsList, quizId);
+            const currentResult = customMode.results.value[customMode.currentIndex.value];
+            answer.value = customMode.currentIdiom.value!;
+            guesses.value = currentResult?.guesses || [];
+            gameWon.value = currentResult?.won || false;
+            gameFailed.value = currentResult?.completed && !currentResult.won;
+            elapsedTime.value = currentResult?.time || 0;
+            if (currentResult?.time) {
+                const minutes = Math.floor(currentResult.time / 60);
+                const seconds = currentResult.time % 60;
+                elapsedTimeStr.value = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
+            }
+            currentInput.value = '';
+            startTime.value = 0;
+            return;
+        } catch {
+            // Invalid custom mode link
+        }
+    }
+
+    // Check for shared single idiom
     const sharedIdiom = hashParams.get('idiom');
 
     if (sharedIdiom) {
@@ -185,8 +296,8 @@ const initGame = () => {
     }
 };
 
-onMounted(() => {
-    initGame();
+onMounted(async () => {
+    await initGame();
 });
 
 const answerParsed = computed(() => parseIdiom(answer.value));
@@ -221,12 +332,24 @@ const handleSubmit = () => {
         return;
     }
 
+    // 如果在查看其他题目，不允许提交
+    if (customMode.isActive.value && customMode.viewIndex.value !== customMode.currentIndex.value) {
+        alert('请先返回当前题目再提交答案');
+        return;
+    }
+
     if (guesses.value.length === 0) {
         startTime.value = Date.now();
     }
 
     guesses.value.push(currentInput.value);
-    saveGameState();
+    
+    // 自定义模式下每次提交都保存进度（不改变完成状态）
+    if (customMode.isActive.value) {
+        customMode.saveCurrentProgress(guesses.value);
+    } else {
+        saveGameState();
+    }
 
     if (currentInput.value === answer.value) {
         gameWon.value = true;
@@ -237,24 +360,34 @@ const handleSubmit = () => {
         elapsedTime.value = seconds;
         elapsedTimeStr.value = minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
 
-        if (!guessedList.value.includes(answer.value)) {
-            guessedList.value.push(answer.value);
-            if (guessedList.value.length > 1000) {
-                guessedList.value.shift();
+        if (customMode.isActive.value) {
+            customMode.updateCurrentResult(guesses.value, true, seconds);
+        } else {
+            if (!guessedList.value.includes(answer.value)) {
+                guessedList.value.push(answer.value);
+                if (guessedList.value.length > 1000) {
+                    guessedList.value.shift();
+                }
+                localStorage.setItem('guessedIdioms', JSON.stringify(guessedList.value));
             }
-            localStorage.setItem('guessedIdioms', JSON.stringify(guessedList.value));
+            saveToHistory(true);
         }
-        saveToHistory(true);
     } else if (guesses.value.length >= MAX_ATTEMPTS) {
         gameFailed.value = true;
-        if (!guessedList.value.includes(answer.value)) {
-            guessedList.value.push(answer.value);
-            if (guessedList.value.length > 1000) {
-                guessedList.value.shift();
+        const seconds = Math.floor((Date.now() - startTime.value) / 1000);
+
+        if (customMode.isActive.value) {
+            customMode.updateCurrentResult(guesses.value, false, seconds);
+        } else {
+            if (!guessedList.value.includes(answer.value)) {
+                guessedList.value.push(answer.value);
+                if (guessedList.value.length > 1000) {
+                    guessedList.value.shift();
+                }
+                localStorage.setItem('guessedIdioms', JSON.stringify(guessedList.value));
             }
-            localStorage.setItem('guessedIdioms', JSON.stringify(guessedList.value));
+            saveToHistory(false);
         }
-        saveToHistory(false);
     }
 
     currentInput.value = '';
@@ -292,7 +425,14 @@ const closeCreateQuiz = () => {
                 <button @click="shareWebpage" class="share-btn" title="分享网页">🔗</button>
             </div>
         </div>
-        <div v-if="guessedList.length > 0" class="progress">（你已完成 {{ guessedList.length }} 题）</div>
+        <div v-if="customMode.isActive.value" class="custom-mode-header">
+            <div class="progress">{{ customMode.progress.value }}</div>
+            <button @click="exitCustomMode" class="exit-btn">退出自定义模式</button>
+        </div>
+        <div v-else-if="guessedList.length > 0" class="progress">（你已完成 {{ guessedList.length }} 题）</div>
+
+        <ProgressNav v-if="customMode.isActive.value" :results="customMode.results.value"
+            :currentIndex="customMode.currentIndex.value" :viewIndex="customMode.viewIndex.value" @jumpTo="handleJumpTo" />
 
         <div class="guesses">
             <div v-for="(guess, guessIndex) in guessesWithPinyin" :key="guessIndex" class="guess-row">
@@ -311,25 +451,29 @@ const closeCreateQuiz = () => {
         <div v-if="showCongrats" class="congrats-modal">
             <div class="congrats-content">
                 <div class="congrats-icon">🎉</div>
-                <h2>恭喜你完成了所有挑战！</h2>
-                <p>是否重新开始？</p>
+                <h2 v-if="customMode.isActive.value">恭喜完成所有自定义题目！</h2>
+                <h2 v-else>恭喜你完成了所有挑战！</h2>
+                <p v-if="customMode.isActive.value">是否退出自定义模式？</p>
+                <p v-else>是否重新开始？</p>
                 <div class="congrats-buttons">
-                    <button @click="resetAll">重新开始</button>
+                    <button v-if="customMode.isActive.value" @click="exitCustomMode">退出</button>
+                    <button v-else @click="resetAll">重新开始</button>
                 </div>
             </div>
         </div>
 
         <div v-if="gameFailed" class="message failed">
             😔 很遗憾，没有猜对！
-            <button @click="startNewIdiom">下一题</button>
+            <button v-if="!customMode.isActive.value || customMode.viewIndex.value === customMode.currentIndex.value" @click="startNewIdiom">下一题</button>
         </div>
 
         <div v-if="gameWon" class="message">
             🎉 恭喜你猜对了！
             <div>用时：{{ elapsedTimeStr }}<span v-if="elapsedTime === 0">(你一定开挂了!)</span></div>
-            <div class="action-buttons">
+            <div v-if="!customMode.isActive.value || customMode.viewIndex.value === customMode.currentIndex.value" class="action-buttons">
                 <button @click="startNewIdiom">下一题</button>
-                <button @click="shareCurrent" class="share-question-btn" title="分享当前题目">📤 分享题目</button>
+                <button v-if="!customMode.isActive.value" @click="shareCurrent" class="share-question-btn"
+                    title="分享当前题目">📤 分享题目</button>
             </div>
         </div>
 
@@ -399,6 +543,24 @@ h1 {
 
 .share-question-btn:hover {
     background: #f57c00;
+}
+
+.custom-mode-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.exit-btn {
+    background: #f44336;
+    font-size: 14px;
+    padding: 6px 12px;
+}
+
+.exit-btn:hover {
+    background: #d32f2f;
 }
 
 .progress {
