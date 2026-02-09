@@ -26,12 +26,28 @@ interface CharMatch {
     pinyin: PinyinMatch;
 }
 
+interface GameState {
+    currentIdiom: string;
+    startTime: number;
+    guesses: string[];
+}
+
 const answer = ref('');
 const guesses = ref<string[]>([]);
 const currentInput = ref('');
 const gameWon = ref(false);
 const guessedList = ref<string[]>([]);
 const elapsedTime = ref('');
+const startTime = ref(0);
+
+const saveGameState = () => {
+    const state: GameState = {
+        currentIdiom: answer.value,
+        startTime: startTime.value,
+        guesses: guesses.value
+    };
+    sessionStorage.setItem('gameState', JSON.stringify(state));
+};
 
 const getRandomIdiom = (): string => {
     const availableIdioms = idioms.filter(idiom => !guessedList.value.includes(idiom));
@@ -45,14 +61,37 @@ const getRandomIdiom = (): string => {
     return availableIdioms[Math.floor(Math.random() * availableIdioms.length)]!;
 };
 
+const startNewIdiom = () => {
+    answer.value = getRandomIdiom();
+    startTime.value = 0;
+    guesses.value = [];
+    currentInput.value = '';
+    gameWon.value = false;
+    elapsedTime.value = '';
+    saveGameState();
+};
+
 const initGame = () => {
     guessedList.value = JSON.parse(localStorage.getItem('guessedIdioms') || '[]');
-    const cached = sessionStorage.getItem('currentIdiom');
-    if (cached) {
-        answer.value = cached;
+    const savedState = sessionStorage.getItem('gameState');
+
+    if (savedState) {
+        const state: GameState = JSON.parse(savedState);
+        answer.value = state.currentIdiom;
+        startTime.value = state.startTime;
+        guesses.value = state.guesses;
+        
+        if (guesses.value.length > 0 && guesses.value[guesses.value.length - 1] === answer.value) {
+            gameWon.value = true;
+            if (startTime.value > 0) {
+                const seconds = Math.floor((Date.now() - startTime.value) / 1000);
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = seconds % 60;
+                elapsedTime.value = minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
+            }
+        }
     } else {
-        answer.value = getRandomIdiom();
-        sessionStorage.setItem('currentIdiom', answer.value);
+        startNewIdiom();
     }
 };
 
@@ -313,12 +352,6 @@ const guessesWithPinyin = computed<GuessWithData[]>(() => {
     });
 });
 
-const getCharStatus = (char: string, index: number): 'correct' | 'present' | 'absent' => {
-    if (answerParsed.value[index]?.char === char) return 'correct';
-    if (answerParsed.value.some(a => a.char === char)) return 'present';
-    return 'absent';
-};
-
 const handleSubmit = () => {
     if (currentInput.value.length !== 4) {
         alert('请输入四字成语');
@@ -326,16 +359,16 @@ const handleSubmit = () => {
     }
 
     if (guesses.value.length === 0) {
-        localStorage.setItem('startTime', Date.now().toString());
+        startTime.value = Date.now();
     }
 
     guesses.value.push(currentInput.value);
+    saveGameState();
 
     if (currentInput.value === answer.value) {
         gameWon.value = true;
-        const startTime = parseInt(localStorage.getItem('startTime') || '0');
         const endTime = Date.now();
-        const seconds = Math.floor((endTime - startTime) / 1000);
+        const seconds = Math.floor((endTime - startTime.value) / 1000);
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
         elapsedTime.value = minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
@@ -352,14 +385,6 @@ const handleSubmit = () => {
     currentInput.value = '';
 };
 
-const nextIdiom = () => {
-    answer.value = getRandomIdiom();
-    sessionStorage.setItem('currentIdiom', answer.value);
-    guesses.value = [];
-    currentInput.value = '';
-    gameWon.value = false;
-    elapsedTime.value = '';
-};
 </script>
 
 <template>
@@ -376,7 +401,7 @@ const nextIdiom = () => {
         <div v-if="gameWon" class="message">
             🎉 恭喜你猜对了！
             <div>用时：{{ elapsedTime }}</div>
-            <button @click="nextIdiom">下一题</button>
+            <button @click="startNewIdiom">下一题</button>
         </div>
 
         <div v-if="!gameWon" class="input-area">
