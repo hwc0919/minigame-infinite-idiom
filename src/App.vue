@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { pinyin } from 'pinyin-pro';
 import CharBox from './components/CharBox.vue';
+import { idioms } from './assets/idioms';
 
 interface PinyinParts {
     initial: string;
@@ -25,10 +26,39 @@ interface CharMatch {
     pinyin: PinyinMatch;
 }
 
-const answer = '一马当先'; // 答案成语
+const answer = ref('');
 const guesses = ref<string[]>([]);
 const currentInput = ref('');
 const gameWon = ref(false);
+const guessedList = ref<string[]>([]);
+const elapsedTime = ref('');
+
+const getRandomIdiom = (): string => {
+    const availableIdioms = idioms.filter(idiom => !guessedList.value.includes(idiom));
+
+    if (availableIdioms.length === 0) {
+        guessedList.value = [];
+        localStorage.setItem('guessedIdioms', '[]');
+        return idioms[Math.floor(Math.random() * idioms.length)]!;
+    }
+
+    return availableIdioms[Math.floor(Math.random() * availableIdioms.length)]!;
+};
+
+const initGame = () => {
+    guessedList.value = JSON.parse(localStorage.getItem('guessedIdioms') || '[]');
+    const cached = sessionStorage.getItem('currentIdiom');
+    if (cached) {
+        answer.value = cached;
+    } else {
+        answer.value = getRandomIdiom();
+        sessionStorage.setItem('currentIdiom', answer.value);
+    }
+};
+
+onMounted(() => {
+    initGame();
+});
 
 const parseIdiom = (idiom: string): CharWithPinyin[] => {
     const chars = idiom.split('');
@@ -53,7 +83,7 @@ const parseIdiom = (idiom: string): CharWithPinyin[] => {
     }));
 };
 
-const answerParsed = parseIdiom(answer);
+const answerParsed = computed(() => parseIdiom(answer.value));
 
 const deepCopy = function <T>(obj: T): T {
     return JSON.parse(JSON.stringify(obj));
@@ -274,7 +304,7 @@ interface GuessWithData {
 const guessesWithPinyin = computed<GuessWithData[]>(() => {
     return guesses.value.map(guess => {
         const parsed = parseIdiom(guess);
-        const matches = compareIdioms(parsed, answerParsed);
+        const matches = compareIdioms(parsed, answerParsed.value);
         return {
             chars: parsed.map(p => p.char),
             pinyins: parsed.map(p => p.pinyin),
@@ -284,8 +314,8 @@ const guessesWithPinyin = computed<GuessWithData[]>(() => {
 });
 
 const getCharStatus = (char: string, index: number): 'correct' | 'present' | 'absent' => {
-    if (answerParsed[index]?.char === char) return 'correct';
-    if (answerParsed.some(a => a.char === char)) return 'present';
+    if (answerParsed.value[index]?.char === char) return 'correct';
+    if (answerParsed.value.some(a => a.char === char)) return 'present';
     return 'absent';
 };
 
@@ -295,19 +325,40 @@ const handleSubmit = () => {
         return;
     }
 
+    if (guesses.value.length === 0) {
+        localStorage.setItem('startTime', Date.now().toString());
+    }
+
     guesses.value.push(currentInput.value);
 
-    if (currentInput.value === answer) {
+    if (currentInput.value === answer.value) {
         gameWon.value = true;
+        const startTime = parseInt(localStorage.getItem('startTime') || '0');
+        const endTime = Date.now();
+        const seconds = Math.floor((endTime - startTime) / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        elapsedTime.value = minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
+
+        if (!guessedList.value.includes(answer.value)) {
+            guessedList.value.push(answer.value);
+            if (guessedList.value.length > 1000) {
+                guessedList.value.shift();
+            }
+            localStorage.setItem('guessedIdioms', JSON.stringify(guessedList.value));
+        }
     }
 
     currentInput.value = '';
 };
 
-const restart = () => {
+const nextIdiom = () => {
+    answer.value = getRandomIdiom();
+    sessionStorage.setItem('currentIdiom', answer.value);
     guesses.value = [];
     currentInput.value = '';
     gameWon.value = false;
+    elapsedTime.value = '';
 };
 </script>
 
@@ -324,7 +375,8 @@ const restart = () => {
 
         <div v-if="gameWon" class="message">
             🎉 恭喜你猜对了！
-            <button @click="restart">再玩一次</button>
+            <div>用时：{{ elapsedTime }}</div>
+            <button @click="nextIdiom">下一题</button>
         </div>
 
         <div v-if="!gameWon" class="input-area">
