@@ -9,13 +9,29 @@ interface PinyinParts {
     tone: string;
 }
 
+interface CharWithPinyin {
+    char: string;
+    pinyin: PinyinParts;
+}
+
+interface PinyinMatch {
+    initial: boolean;
+    final: boolean;
+    tone: boolean;
+}
+
+interface CharMatch {
+    char: boolean;
+    pinyin: PinyinMatch;
+}
+
 const answer = '一马当先'; // 答案成语
-const answerChars = answer.split('');
 const guesses = ref<string[]>([]);
 const currentInput = ref('');
 const gameWon = ref(false);
 
-const getIdiomPinyin = (idiom: string): PinyinParts[] => {
+const parseIdiom = (idiom: string): CharWithPinyin[] => {
+    const chars = idiom.split('');
     const initials = pinyin(idiom, { pattern: 'initial', type: 'array' }) as string[];
     const finals = pinyin(idiom, { pattern: 'final', toneType: 'none', type: 'array' }) as string[];
     const toneNums = pinyin(idiom, { pattern: 'num', type: 'array' }) as (string | undefined)[];
@@ -27,23 +43,63 @@ const getIdiomPinyin = (idiom: string): PinyinParts[] => {
         '4': '\u02CB',
     };
 
-    return initials.map((initial, index) => ({
-        initial: initial || '',
-        final: finals[index] || '',
-        tone: toneSymbols[toneNums[index] || ''] || ''
+    return chars.map((char, index) => ({
+        char,
+        pinyin: {
+            initial: initials[index] || '',
+            final: finals[index] || '',
+            tone: toneSymbols[toneNums[index] || ''] || ''
+        }
     }));
 };
 
-const guessesWithPinyin = computed(() => {
-    return guesses.value.map(guess => ({
-        chars: guess.split(''),
-        pinyins: getIdiomPinyin(guess)
-    }));
+const answerParsed = parseIdiom(answer);
+
+const compareIdioms = (guess: CharWithPinyin[], answer: CharWithPinyin[]): CharMatch[] => {
+    return guess.map((guessItem, index) => {
+        const answerItem = answer[index];
+        if (!answerItem) {
+            return {
+                char: false,
+                pinyin: {
+                    initial: false,
+                    final: false,
+                    tone: false
+                }
+            };
+        }
+        return {
+            char: guessItem.char === answerItem.char,
+            pinyin: {
+                initial: guessItem.pinyin.initial === answerItem.pinyin.initial,
+                final: guessItem.pinyin.final === answerItem.pinyin.final,
+                tone: guessItem.pinyin.tone === answerItem.pinyin.tone
+            }
+        };
+    });
+};
+
+interface GuessWithData {
+    chars: string[];
+    pinyins: PinyinParts[];
+    matches: CharMatch[];
+}
+
+const guessesWithPinyin = computed<GuessWithData[]>(() => {
+    return guesses.value.map(guess => {
+        const parsed = parseIdiom(guess);
+        const matches = compareIdioms(parsed, answerParsed);
+        return {
+            chars: parsed.map(p => p.char),
+            pinyins: parsed.map(p => p.pinyin),
+            matches
+        };
+    });
 });
 
-const getCharStatus = (char: string, index: number) => {
-    if (answerChars[index] === char) return 'correct';
-    if (answerChars.includes(char)) return 'present';
+const getCharStatus = (char: string, index: number): 'correct' | 'present' | 'absent' => {
+    if (answerParsed[index]?.char === char) return 'correct';
+    if (answerParsed.some(a => a.char === char)) return 'present';
     return 'absent';
 };
 
