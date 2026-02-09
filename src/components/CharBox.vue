@@ -93,8 +93,7 @@ defineProps<Props>();
 }
 
 .pinyin {
-    font-size: 12px;
-    margin-bottom: 5px;
+    font-size: 14px;
     color: #666;
 }
 
