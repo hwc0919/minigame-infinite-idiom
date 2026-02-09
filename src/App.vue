@@ -36,12 +36,14 @@ const answer = ref('');
 const guesses = ref<string[]>([]);
 const currentInput = ref('');
 const gameWon = ref(false);
+const gameFailed = ref(false);
 const guessedList = ref<string[]>([]);
 const elapsedTimeStr = ref('');
 const elapsedTime = ref(0);
 const startTime = ref(0);
 const showCongrats = ref(false);
 
+const MAX_ATTEMPTS = 10;
 const KEY = 'idiom2026';
 
 const encryptIdiom = (text: string): string => {
@@ -102,6 +104,7 @@ const startNewIdiom = () => {
     guesses.value = [];
     currentInput.value = '';
     gameWon.value = false;
+    gameFailed.value = false;
     elapsedTimeStr.value = '';
     elapsedTime.value = 0;
     saveGameState();
@@ -131,6 +134,7 @@ const initGame = () => {
                 guesses.value = [];
                 currentInput.value = '';
                 gameWon.value = false;
+                gameFailed.value = false;
                 elapsedTimeStr.value = '';
                 elapsedTime.value = 0;
                 saveGameState();
@@ -480,6 +484,15 @@ const handleSubmit = () => {
             }
             localStorage.setItem('guessedIdioms', JSON.stringify(guessedList.value));
         }
+    } else if (guesses.value.length >= MAX_ATTEMPTS) {
+        gameFailed.value = true;
+        if (!guessedList.value.includes(answer.value)) {
+            guessedList.value.push(answer.value);
+            if (guessedList.value.length > 1000) {
+                guessedList.value.shift();
+            }
+            localStorage.setItem('guessedIdioms', JSON.stringify(guessedList.value));
+        }
     }
 
     currentInput.value = '';
@@ -513,7 +526,7 @@ const shareWebpage = async () => {
                 <CharBox v-for="(char, charIndex) in guess.chars" :key="charIndex" :char="char"
                     :pinyin="guess.pinyins[charIndex]!" :match="guess.matches[charIndex] || emptyMatch()" />
             </div>
-            <div v-if="!gameWon" class="guess-row">
+            <div v-if="!gameWon && !gameFailed" class="guess-row">
                 <CharBox v-for="i in 4" :key="i" :char="currentInput[i - 1] || ''"
                     :pinyin="currentInput[i - 1] ? parseIdiom(currentInput[i - 1]!)[0]!.pinyin : { initial: '', final: '', tone: '' }"
                     :match="{ char: 0, pinyin: { initial: 0, final: 0, tone: 0 } }" />
@@ -531,6 +544,11 @@ const shareWebpage = async () => {
             </div>
         </div>
 
+        <div v-if="gameFailed" class="message failed">
+            😔 很遗憾，没有猜对！
+            <button @click="startNewIdiom">下一题</button>
+        </div>
+
         <div v-if="gameWon" class="message">
             🎉 恭喜你猜对了！
             <div>用时：{{ elapsedTimeStr }}<span v-if="elapsedTime === 0">(你一定开挂了!)</span></div>
@@ -540,9 +558,12 @@ const shareWebpage = async () => {
             </div>
         </div>
 
-        <div v-if="!gameWon" class="input-area">
-            <input v-model="currentInput" maxlength="4" placeholder="输入四字成语" @keyup.enter="handleSubmit" />
-            <button @click="handleSubmit">确定</button>
+        <div v-if="!gameWon && !gameFailed" class="input-area">
+            <div class="input-row">
+                <input v-model="currentInput" maxlength="4" placeholder="输入四字成语" @keyup.enter="handleSubmit" />
+                <button @click="handleSubmit">确定</button>
+            </div>
+            <div class="attempts-left">剩余尝试次数：{{ MAX_ATTEMPTS - guesses.length }}</div>
         </div>
     </div>
 </template>
@@ -606,6 +627,12 @@ h1 {
     margin-bottom: 20px;
 }
 
+.attempts-left {
+    font-size: 14px;
+    color: #ff9800;
+    font-weight: bold;
+}
+
 .guesses {
     margin-bottom: 30px;
 }
@@ -618,6 +645,13 @@ h1 {
 }
 
 .input-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.input-row {
     display: flex;
     justify-content: center;
     gap: 10px;
@@ -650,6 +684,10 @@ button:hover {
     font-size: 20px;
     color: #4caf50;
     font-weight: bold;
+}
+
+.message.failed {
+    color: #f44336;
 }
 
 @media (max-width: 480px) {
