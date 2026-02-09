@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue';
-import { encryptIdiom, decryptIdiom } from '../idiom';
+import { encryptIdiom } from '../idiom';
 
 export interface QuizResult {
     idiom: string;

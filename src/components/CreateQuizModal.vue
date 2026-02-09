@@ -16,12 +16,12 @@ const customIdioms = ref<string[]>(['']);
 const addIdiomInput = () => {
     const chineseRegex = /^[\u4e00-\u9fa5]{4}$/;
     const lastIdiom = customIdioms.value[customIdioms.value.length - 1];
-    
+
     if (!lastIdiom || !chineseRegex.test(lastIdiom)) {
         alert('请先输入完整的四字成语');
         return;
     }
-    
+
     if (customIdioms.value.length < 5) {
         customIdioms.value.push('');
     }
@@ -68,7 +68,7 @@ const handleClose = () => {
             <h2>手动出题</h2>
             <p>输入1-5个四字成语</p>
             <div class="idiom-inputs">
-                <div v-for="(idiom, index) in customIdioms" :key="index" class="idiom-input-row">
+                <div v-for="(_, index) in customIdioms" :key="index" class="idiom-input-row">
                     <input v-model="customIdioms[index]" maxlength="4" :placeholder="`成语 ${index + 1}`"
                         class="idiom-input" />
                     <button @click="removeIdiomInput(index)" class="delete-btn">×</button>
@@ -201,6 +201,7 @@ const handleClose = () => {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -211,6 +212,7 @@ const handleClose = () => {
         transform: scale(0.5);
         opacity: 0;
     }
+
     to {
         transform: scale(1);
         opacity: 1;
