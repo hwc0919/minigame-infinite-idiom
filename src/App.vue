@@ -42,9 +42,29 @@ const elapsedTime = ref(0);
 const startTime = ref(0);
 const showCongrats = ref(false);
 
+const KEY = 'idiom2026';
+
+const encryptIdiom = (text: string): string => {
+    const combined = '[这样做是不对的]' + text;
+    let result = '';
+    for (let i = 0; i < combined.length; i++) {
+        result += String.fromCharCode(combined.charCodeAt(i) ^ KEY.charCodeAt(i % KEY.length));
+    }
+    return btoa(encodeURIComponent(result));
+};
+
+const decryptIdiom = (encoded: string): string => {
+    const decoded = decodeURIComponent(atob(encoded));
+    let result = '';
+    for (let i = 0; i < decoded.length; i++) {
+        result += String.fromCharCode(decoded.charCodeAt(i) ^ KEY.charCodeAt(i % KEY.length));
+    }
+    return result.replace('[这样做是不对的]', '');
+};
+
 const saveGameState = () => {
     const state: GameState = {
-        currentIdiom: answer.value,
+        currentIdiom: encryptIdiom(answer.value),
         startTime: startTime.value,
         guesses: guesses.value
     };
@@ -67,13 +87,16 @@ const getRandomIdiom = (): string | null => {
 };
 
 const startNewIdiom = () => {
+    console.log("start new idiom!!!");
     const newIdiom = getRandomIdiom();
 
     if (newIdiom === null) {
+        console.log("no more idiom available!!!");
         showCongrats.value = true;
         return;
     }
 
+    console.log("new idiom:", newIdiom);
     answer.value = newIdiom;
     startTime.value = 0;
     guesses.value = [];
@@ -96,20 +119,39 @@ const initGame = () => {
     const savedState = sessionStorage.getItem('gameState');
 
     if (savedState) {
-        const state: GameState = JSON.parse(savedState);
-        answer.value = state.currentIdiom;
-        startTime.value = state.startTime;
-        guesses.value = state.guesses;
+        try {
+            const state: GameState = JSON.parse(savedState);
+            answer.value = decryptIdiom(state.currentIdiom);
+            startTime.value = state.startTime;
+            guesses.value = state.guesses;
 
-        if (guesses.value.length > 0 && guesses.value[guesses.value.length - 1] === answer.value) {
-            gameWon.value = true;
-            if (startTime.value > 0) {
-                const seconds = Math.floor((Date.now() - startTime.value) / 1000);
-                const minutes = Math.floor(seconds / 60);
-                const remainingSeconds = seconds % 60;
-                elapsedTime.value = seconds;
-                elapsedTimeStr.value = minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
+            const isGameWon = guesses.value.length > 0 && guesses.value[guesses.value.length - 1] === answer.value;
+
+            console.log('Restored game state:', {
+                answer: answer.value,
+                startTime: new Date(startTime.value).toLocaleString(),
+                guesses: guesses.value,
+                isGameWon
+            });
+
+            if (!isGameWon && !idioms.includes(answer.value)) {
+                console.log("start new!!!");
+                startNewIdiom();
+                return;
             }
+
+            if (isGameWon) {
+                gameWon.value = true;
+                if (startTime.value > 0) {
+                    const seconds = Math.floor((Date.now() - startTime.value) / 1000);
+                    const minutes = Math.floor(seconds / 60);
+                    const remainingSeconds = seconds % 60;
+                    elapsedTime.value = seconds;
+                    elapsedTimeStr.value = minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
+                }
+            }
+        } catch {
+            startNewIdiom();
         }
     } else {
         startNewIdiom();
@@ -149,6 +191,17 @@ const deepCopy = function <T>(obj: T): T {
     return JSON.parse(JSON.stringify(obj));
 };
 
+const emptyMatch = (): CharMatch => {
+    return {
+        char: 0,
+        pinyin: {
+            initial: 0,
+            final: 0,
+            tone: 0
+        }
+    };
+};
+
 const compareIdioms = (guess0: CharWithPinyin[], answer0: CharWithPinyin[]): CharMatch[] => {
     let guess = deepCopy(guess0);
     let answer = deepCopy(answer0);
@@ -157,22 +210,8 @@ const compareIdioms = (guess0: CharWithPinyin[], answer0: CharWithPinyin[]): Cha
     let matches: CharMatch[] = [];
     let matchedAnswer: CharMatch[] = [];
     for (let i = 0; i < guess.length; ++i) {
-        matches.push({
-            char: 0,
-            pinyin: {
-                initial: 0,
-                final: 0,
-                tone: 0
-            }
-        });
-        matchedAnswer.push({
-            char: 0,
-            pinyin: {
-                initial: 0,
-                final: 0,
-                tone: 0
-            }
-        });
+        matches.push(emptyMatch());
+        matchedAnswer.push(emptyMatch());
     }
 
     const charCmp = (i: number, j: number) => {
@@ -364,7 +403,13 @@ interface GuessWithData {
 const guessesWithPinyin = computed<GuessWithData[]>(() => {
     return guesses.value.map(guess => {
         const parsed = parseIdiom(guess);
-        const matches = compareIdioms(parsed, answerParsed.value);
+        let matches: CharMatch[] = [];
+        try {
+            matches = compareIdioms(parsed, answerParsed.value);
+        }
+        catch (err) {
+            console.error('Error comparing idioms:', { guess, answer: answer.value, parsed, answerParsed: answerParsed.value, error: err });
+        }
         return {
             chars: parsed.map(p => p.char),
             pinyins: parsed.map(p => p.pinyin),
@@ -423,7 +468,7 @@ const handleSubmit = () => {
         <div class="guesses">
             <div v-for="(guess, guessIndex) in guessesWithPinyin" :key="guessIndex" class="guess-row">
                 <CharBox v-for="(char, charIndex) in guess.chars" :key="charIndex" :char="char"
-                    :pinyin="guess.pinyins[charIndex]!" :match="guess.matches[charIndex]!" />
+                    :pinyin="guess.pinyins[charIndex]!" :match="guess.matches[charIndex] || emptyMatch()" />
             </div>
             <div v-if="!gameWon" class="guess-row">
                 <CharBox v-for="i in 4" :key="i" :char="currentInput[i - 1] || ''"
