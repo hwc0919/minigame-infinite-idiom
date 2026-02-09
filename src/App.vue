@@ -1,6 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { pinyin } from 'pinyin-pro';
+import CharBox from './components/CharBox.vue';
+
+interface PinyinParts {
+    initial: string;
+    final: string;
+    tone: string;
+}
 
 const answer = '一马当先'; // 答案成语
 const answerChars = answer.split('');
@@ -8,11 +15,33 @@ const guesses = ref<string[]>([]);
 const currentInput = ref('');
 const gameWon = ref(false);
 
-const getPinyin = (char: string): string => {
-    return pinyin(char, { toneType: 'symbol' });
+const getIdiomPinyin = (idiom: string): PinyinParts[] => {
+    const initials = pinyin(idiom, { pattern: 'initial', type: 'array' }) as string[];
+    const finals = pinyin(idiom, { pattern: 'final', toneType: 'none', type: 'array' }) as string[];
+    const toneNums = pinyin(idiom, { pattern: 'num', type: 'array' }) as (string | undefined)[];
+
+    const toneSymbols: Record<string, string> = {
+        '1': '\u02C9',
+        '2': '\u02CA',
+        '3': '\u02C7',
+        '4': '\u02CB',
+    };
+
+    return initials.map((initial, index) => ({
+        initial: initial || '',
+        final: finals[index] || '',
+        tone: toneSymbols[toneNums[index] || ''] || ''
+    }));
 };
 
-const getCharStatus = (char: string, index: number, guess: string) => {
+const guessesWithPinyin = computed(() => {
+    return guesses.value.map(guess => ({
+        chars: guess.split(''),
+        pinyins: getIdiomPinyin(guess)
+    }));
+});
+
+const getCharStatus = (char: string, index: number) => {
     if (answerChars[index] === char) return 'correct';
     if (answerChars.includes(char)) return 'present';
     return 'absent';
@@ -45,12 +74,9 @@ const restart = () => {
         <h1>猜成语</h1>
 
         <div class="guesses">
-            <div v-for="(guess, guessIndex) in guesses" :key="guessIndex" class="guess-row">
-                <div v-for="(char, charIndex) in guess.split('')" :key="charIndex" class="char-box"
-                    :class="getCharStatus(char, charIndex, guess)">
-                    <div class="pinyin">{{ getPinyin(char) }}</div>
-                    <div class="char">{{ char }}</div>
-                </div>
+            <div v-for="(guess, guessIndex) in guessesWithPinyin" :key="guessIndex" class="guess-row">
+                <CharBox v-for="(char, charIndex) in guess.chars" :key="charIndex" :char="char"
+                    :pinyin="guess.pinyins[charIndex]" :status="getCharStatus(char, charIndex)" />
             </div>
         </div>
 
@@ -88,42 +114,6 @@ h1 {
     justify-content: center;
     gap: 10px;
     margin-bottom: 10px;
-}
-
-.char-box {
-    width: 80px;
-    height: 90px;
-    border: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    background: #e0e0e0;
-    color: #000;
-}
-
-.char-box.correct {
-    background: #00bcd4;
-    color: white;
-}
-
-.char-box.present {
-    color: #ff9800;
-}
-
-.char-box.absent {
-    background: #e0e0e0;
-}
-
-.pinyin {
-    font-size: 12px;
-    margin-bottom: 5px;
-}
-
-.char {
-    font-size: 28px;
-    font-weight: normal;
 }
 
 .input-area {
