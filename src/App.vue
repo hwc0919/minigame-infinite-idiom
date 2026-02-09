@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { pinyin } from 'pinyin-pro';
 
 const answer = '一马当先'; // 答案成语
 const answerChars = answer.split('');
@@ -8,17 +9,7 @@ const currentInput = ref('');
 const gameWon = ref(false);
 
 const getPinyin = (char: string): string => {
-    const pinyinMap: Record<string, string> = {
-        '一': 'yī', '马': 'mǎ', '当': 'dāng', '先': 'xiān',
-        '二': 'èr', '三': 'sān', '四': 'sì', '五': 'wǔ',
-        '六': 'liù', '七': 'qī', '八': 'bā', '九': 'jiǔ',
-        '十': 'shí', '百': 'bǎi', '千': 'qiān', '万': 'wàn',
-        '人': 'rén', '天': 'tiān', '地': 'dì', '山': 'shān',
-        '水': 'shuǐ', '火': 'huǒ', '木': 'mù', '金': 'jīn',
-        '土': 'tǔ', '日': 'rì', '月': 'yuè', '星': 'xīng',
-        '风': 'fēng', '雨': 'yǔ', '云': 'yún', '雪': 'xuě'
-    };
-    return pinyinMap[char] || '';
+    return pinyin(char, { toneType: 'symbol' });
 };
 
 const getCharStatus = (char: string, index: number, guess: string) => {
