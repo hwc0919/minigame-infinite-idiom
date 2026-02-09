@@ -105,7 +105,6 @@ const startNewIdiom = () => {
         return;
     }
 
-    console.log("new idiom:", newIdiom);
     answer.value = newIdiom;
     startTime.value = 0;
     guesses.value = [];
@@ -197,7 +196,7 @@ const initGame = () => {
             const isGameWon = guesses.value.length > 0 && guesses.value[guesses.value.length - 1] === answer.value;
 
             console.log('Restored game state:', {
-                answer: answer.value,
+                currentIdiom: state.currentIdiom,
                 startTime: new Date(startTime.value).toLocaleString(),
                 guesses: guesses.value,
                 isGameWon
