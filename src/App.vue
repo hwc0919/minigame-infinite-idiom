@@ -32,12 +32,19 @@ interface GameState {
     guesses: string[];
 }
 
+interface IdiomHistory {
+    usedTime: number;
+    guesses: string[];
+    won: boolean;
+}
+
 const answer = ref('');
 const guesses = ref<string[]>([]);
 const currentInput = ref('');
 const gameWon = ref(false);
 const gameFailed = ref(false);
 const guessedList = ref<string[]>([]);
+const guessedHistory = ref<Record<string, IdiomHistory>>({});
 const elapsedTimeStr = ref('');
 const elapsedTime = ref(0);
 const startTime = ref(0);
@@ -110,15 +117,29 @@ const startNewIdiom = () => {
     saveGameState();
 };
 
+const saveToHistory = (won: boolean) => {
+    const endTime = Date.now();
+    const elapsed = startTime.value > 0 ? Math.floor((endTime - startTime.value) / 1000) : 0;
+    guessedHistory.value[answer.value] = {
+        usedTime: elapsed,
+        guesses: [...guesses.value],
+        won
+    };
+    localStorage.setItem('guessedHistory', JSON.stringify(guessedHistory.value));
+};
+
 const resetAll = () => {
     guessedList.value = [];
+    guessedHistory.value = {};
     localStorage.setItem('guessedIdioms', '[]');
+    localStorage.setItem('guessedHistory', '{}');
     showCongrats.value = false;
     startNewIdiom();
 };
 
 const initGame = () => {
     guessedList.value = JSON.parse(localStorage.getItem('guessedIdioms') || '[]');
+    guessedHistory.value = JSON.parse(localStorage.getItem('guessedHistory') || '{}');
 
     // Check for shared idiom in URL hash
     const hash = window.location.hash.slice(1);
@@ -130,13 +151,30 @@ const initGame = () => {
             const decrypted = decryptIdiom(sharedIdiom);
             if (idioms.includes(decrypted)) {
                 answer.value = decrypted;
-                startTime.value = 0;
-                guesses.value = [];
+
+                // Check if this idiom exists in history
+                const history = guessedHistory.value[decrypted];
+                if (history) {
+                    // Load from history
+                    guesses.value = [...history.guesses];
+                    startTime.value = 0;
+                    gameWon.value = history.won;
+                    gameFailed.value = !history.won;
+                    elapsedTime.value = history.usedTime;
+                    const minutes = Math.floor(history.usedTime / 60);
+                    const seconds = history.usedTime % 60;
+                    elapsedTimeStr.value = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
+                } else {
+                    // New game
+                    startTime.value = 0;
+                    guesses.value = [];
+                    gameWon.value = false;
+                    gameFailed.value = false;
+                    elapsedTimeStr.value = '';
+                    elapsedTime.value = 0;
+                }
+
                 currentInput.value = '';
-                gameWon.value = false;
-                gameFailed.value = false;
-                elapsedTimeStr.value = '';
-                elapsedTime.value = 0;
                 saveGameState();
                 // Clear hash
                 window.history.replaceState({}, '', window.location.pathname);
@@ -484,6 +522,7 @@ const handleSubmit = () => {
             }
             localStorage.setItem('guessedIdioms', JSON.stringify(guessedList.value));
         }
+        saveToHistory(true);
     } else if (guesses.value.length >= MAX_ATTEMPTS) {
         gameFailed.value = true;
         if (!guessedList.value.includes(answer.value)) {
@@ -493,6 +532,7 @@ const handleSubmit = () => {
             }
             localStorage.setItem('guessedIdioms', JSON.stringify(guessedList.value));
         }
+        saveToHistory(false);
     }
 
     currentInput.value = '';
