@@ -374,6 +374,12 @@ const handleSubmit = () => {
         return;
     }
 
+    const chineseRegex = /^[\u4e00-\u9fa5]{4}$/;
+    if (!chineseRegex.test(currentInput.value)) {
+        alert('请输入四个汉字');
+        return;
+    }
+
     if (guesses.value.length === 0) {
         startTime.value = Date.now();
     }
@@ -413,6 +419,11 @@ const handleSubmit = () => {
             <div v-for="(guess, guessIndex) in guessesWithPinyin" :key="guessIndex" class="guess-row">
                 <CharBox v-for="(char, charIndex) in guess.chars" :key="charIndex" :char="char"
                     :pinyin="guess.pinyins[charIndex]!" :match="guess.matches[charIndex]!" />
+            </div>
+            <div v-if="!gameWon" class="guess-row">
+                <CharBox v-for="i in 4" :key="i" :char="currentInput[i - 1] || ''"
+                    :pinyin="currentInput[i - 1] ? parseIdiom(currentInput[i - 1]!)[0]!.pinyin : { initial: '', final: '', tone: '' }"
+                    :match="{ char: 0, pinyin: { initial: 0, final: 0, tone: 0 } }" />
             </div>
         </div>
 
