@@ -1,5 +1,15 @@
-# Vue 3 + TypeScript + Vite
+# 猜成语游戏
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+一个基于 Vue 3 + TypeScript 的 Wordle 风格成语猜谜游戏。
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+> 模仿「字多」微信小程序 (为什么每天只能做一题?)
+
+## 游戏规则
+
+- 猜测四字成语
+- 每次输入后会显示匹配提示：
+  - 青色背景：字符或拼音组件位置正确
+  - 橙色文字：字符或拼音组件存在但位置错误
+  - 灰色背景：不匹配
+- 匹配维度包括：汉字、完整拼音、声母+韵母、声母、韵母、声调
+- 完成所有成语后可重新开始
