@@ -6,13 +6,13 @@ interface PinyinParts {
 }
 
 interface PinyinMatch {
-    initial: boolean;
-    final: boolean;
-    tone: boolean;
+    initial: number;
+    final: number;
+    tone: number;
 }
 
 interface CharMatch {
-    char: boolean;
+    char: number;
     pinyin: PinyinMatch;
 }
 
@@ -26,11 +26,11 @@ defineProps<Props>();
 </script>
 
 <template>
-    <div class="char-box" :class="{ correct: match.char }">
+    <div class="char-box" :class="{ correct: match.char === 2 }">
         <div class="pinyin">
-            <span class="initial" :class="{ correct: match.pinyin.initial }">{{ pinyin.initial }}</span><span
-                class="final" :class="{ correct: match.pinyin.final }">{{ pinyin.final }}</span><span class="tone"
-                :class="{ correct: match.pinyin.tone }">{{ pinyin.tone }}</span>
+            <span class="initial" :class="{ correct: match.pinyin.initial === 2 }">{{ pinyin.initial }}</span><span
+                class="final" :class="{ correct: match.pinyin.final === 2 }">{{ pinyin.final }}</span><span class="tone"
+                :class="{ correct: match.pinyin.tone === 2 }">{{ pinyin.tone }}</span>
         </div>
         <div class="char">{{ char }}</div>
     </div>

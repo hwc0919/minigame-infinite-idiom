@@ -15,13 +15,13 @@ interface CharWithPinyin {
 }
 
 interface PinyinMatch {
-    initial: boolean;
-    final: boolean;
-    tone: boolean;
+    initial: number;
+    final: number;
+    tone: number;
 }
 
 interface CharMatch {
-    char: boolean;
+    char: number;
     pinyin: PinyinMatch;
 }
 
@@ -55,28 +55,165 @@ const parseIdiom = (idiom: string): CharWithPinyin[] => {
 
 const answerParsed = parseIdiom(answer);
 
-const compareIdioms = (guess: CharWithPinyin[], answer: CharWithPinyin[]): CharMatch[] => {
-    return guess.map((guessItem, index) => {
-        const answerItem = answer[index];
-        if (!answerItem) {
-            return {
-                char: false,
-                pinyin: {
-                    initial: false,
-                    final: false,
-                    tone: false
-                }
-            };
-        }
-        return {
-            char: guessItem.char === answerItem.char,
+const deepCopy = function <T>(obj: T): T {
+    return JSON.parse(JSON.stringify(obj));
+};
+
+const compareIdioms = (guess0: CharWithPinyin[], answer0: CharWithPinyin[]): CharMatch[] => {
+    let guess = deepCopy(guess0);
+    let answer = deepCopy(answer0);
+
+    // default value
+    let matches: CharMatch[] = [];
+    let matchedAnswer: CharMatch[] = [];
+    for (let i = 0; i < guess.length; ++i) {
+        matches.push({
+            char: 0,
             pinyin: {
-                initial: guessItem.pinyin.initial === answerItem.pinyin.initial,
-                final: guessItem.pinyin.final === answerItem.pinyin.final,
-                tone: guessItem.pinyin.tone === answerItem.pinyin.tone
+                initial: 0,
+                final: 0,
+                tone: 0
             }
-        };
-    });
+        });
+        matchedAnswer.push({
+            char: 0,
+            pinyin: {
+                initial: 0,
+                final: 0,
+                tone: 0
+            }
+        });
+    }
+
+    // 先逐字对比
+    for (let i = 0; i < guess.length; i++) {
+        for (let j = 0; j < answer.length; j++) {
+            // 如果这个字已经被匹配过了，就跳过
+            if (matchedAnswer[j]!.char) {
+                continue;
+            }
+            if (guess[i]!.char === answer[j]!.char) {
+                matches[i]!.char = (j === i) ? 2 : 1; // 位置正确为2，位置错误为1
+                matches[i]!.pinyin.initial = (j === i) ? 2 : 1;
+                matches[i]!.pinyin.final = (j === i) ? 2 : 1;
+                matches[i]!.pinyin.tone = (j === i) ? 2 : 1;
+                matchedAnswer[j]!.char = (j === i) ? 2 : 1;
+                matchedAnswer[j]!.pinyin.initial = (j === i) ? 2 : 1;
+                matchedAnswer[j]!.pinyin.final = (j === i) ? 2 : 1;
+                matchedAnswer[j]!.pinyin.tone = (j === i) ? 2 : 1;
+                break;
+            }
+        }
+    }
+
+    // 2.再对比拼音
+    // 2.1 对比完整拼音(声母+韵母+声调)
+    for (let i = 0; i < guess.length; i++) {
+        for (let j = 0; j < answer.length; j++) {
+            // 如果这个字已经被匹配过了，就跳过
+            if (matches[i]!.char) {
+                continue;
+            }
+            // 如果answer中的任何元素已经被匹配过了，就跳过
+            if (matchedAnswer[j]!.char
+                || matchedAnswer[j]!.pinyin.initial
+                || matchedAnswer[j]!.pinyin.final
+                || matchedAnswer[j]!.pinyin.tone) {
+                continue;
+            }
+            const full = guess[i]!.pinyin.initial + guess[i]!.pinyin.final + guess[i]!.pinyin.tone;
+            const answerFull = answer[j]!.pinyin.initial + answer[j]!.pinyin.final + answer[j]!.pinyin.tone;
+            if (full === answerFull) {
+                matches[i]!.pinyin.initial = (j === i) ? 2 : 1;
+                matches[i]!.pinyin.final = (j === i) ? 2 : 1;
+                matches[i]!.pinyin.tone = (j === i) ? 2 : 1;
+                matchedAnswer[j]!.pinyin.initial = (j === i) ? 2 : 1;
+                matchedAnswer[j]!.pinyin.final = (j === i) ? 2 : 1;
+                matchedAnswer[j]!.pinyin.tone = (j === i) ? 2 : 1;
+                break;
+            }
+        }
+    }
+
+    // 2.2 对比声母+韵母
+    for (let i = 0; i < guess.length; i++) {
+        for (let j = 0; j < answer.length; j++) {
+            // 如果这个字已经被匹配过了，就跳过
+            if (matches[i]!.char || matches[i]!.pinyin.initial || matches[i]!.pinyin.final) {
+                continue;
+            }
+            // 如果answer中的任何元素已经被匹配过了，就跳过
+            if (matchedAnswer[j]!.char
+                || matchedAnswer[j]!.pinyin.initial
+                || matchedAnswer[j]!.pinyin.final) {
+                continue;
+            }
+            if (guess[i]!.pinyin.initial === answer[j]!.pinyin.initial
+                && guess[i]!.pinyin.final === answer[j]!.pinyin.final) {
+                matches[i]!.pinyin.initial = (j === i) ? 2 : 1;
+                matches[i]!.pinyin.final = (j === i) ? 2 : 1;
+                matchedAnswer[j]!.pinyin.initial = (j === i) ? 2 : 1;
+                matchedAnswer[j]!.pinyin.final = (j === i) ? 2 : 1;
+                break;
+            }
+        }
+    }
+
+    // 2.3 对比声母
+    for (let i = 0; i < guess.length; i++) {
+        for (let j = 0; j < answer.length; j++) {
+            if (matches[i]!.char || matches[i]!.pinyin.initial) {
+                continue;
+            }
+            if (matchedAnswer[j]!.char
+                || matchedAnswer[j]!.pinyin.initial) {
+                continue;
+            }
+            if (guess[i]!.pinyin.initial === answer[j]!.pinyin.initial) {
+                matches[i]!.pinyin.initial = (j === i) ? 2 : 1;
+                matchedAnswer[j]!.pinyin.initial = (j === i) ? 2 : 1;
+                break;
+            }
+        }
+    }
+
+    // 2.4 对比韵母
+    for (let i = 0; i < guess.length; i++) {
+        for (let j = 0; j < answer.length; j++) {
+            if (matches[i]!.char || matches[i]!.pinyin.final) {
+                continue;
+            }
+            if (matchedAnswer[j]!.char
+                || matchedAnswer[j]!.pinyin.final) {
+                continue;
+            }
+            if (guess[i]!.pinyin.final === answer[j]!.pinyin.final) {
+                matches[i]!.pinyin.final = (j === i) ? 2 : 1;
+                matchedAnswer[j]!.pinyin.final = (j === i) ? 2 : 1;
+                break;
+            }
+        }
+    }
+
+    // 2.5 对比声调
+    for (let i = 0; i < guess.length; i++) {
+        for (let j = 0; j < answer.length; j++) {
+            if (matches[i]!.char || matches[i]!.pinyin.tone) {
+                continue;
+            }
+            if (matchedAnswer[j]!.char
+                || matchedAnswer[j]!.pinyin.tone) {
+                continue;
+            }
+            if (guess[i]!.pinyin.tone === answer[j]!.pinyin.tone) {
+                matches[i]!.pinyin.tone = (j === i) ? 2 : 1;
+                matchedAnswer[j]!.pinyin.tone = (j === i) ? 2 : 1;
+                break;
+            }
+        }
+    }
+
+    return matches;
 };
 
 interface GuessWithData {
