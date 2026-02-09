@@ -67,7 +67,7 @@ const startNewIdiom = () => {
             answer.value = customMode.currentIdiom.value!;
             guesses.value = result?.guesses || [];
             gameWon.value = result?.won || false;
-            gameFailed.value = result?.completed && !result.won;
+            gameFailed.value = (result?.completed && !result.won) || false;
             elapsedTime.value = result?.time || 0;
             if (result?.time) {
                 const minutes = Math.floor(result.time / 60);
@@ -80,7 +80,7 @@ const startNewIdiom = () => {
             startTime.value = 0;
             return;
         }
-        
+
         if (!customMode.nextIdiom()) {
             showCongrats.value = true;
             return;
@@ -136,12 +136,12 @@ const handleJumpTo = (index: number) => {
     if (customMode.isActive.value && customMode.viewIndex.value === customMode.currentIndex.value && guesses.value.length > 0 && !gameWon.value && !gameFailed.value) {
         customMode.saveCurrentProgress(guesses.value);
     }
-    
+
     customMode.jumpToIdiom(index);
     const result = customMode.results.value[index];
     answer.value = customMode.currentIdiom.value!;
     guesses.value = result?.guesses || [];
-    
+
     // 正确判断游戏状态
     if (result?.completed) {
         gameWon.value = result.won;
@@ -150,7 +150,7 @@ const handleJumpTo = (index: number) => {
         gameWon.value = false;
         gameFailed.value = false;
     }
-    
+
     elapsedTime.value = result?.time || 0;
     if (result?.time) {
         const minutes = Math.floor(result.time / 60);
@@ -191,13 +191,13 @@ const initGame = async () => {
                 const hex = b.toString(16);
                 return hex.length === 1 ? '0' + hex : hex;
             }).join('').slice(0, 16);
-            
+
             await customMode.init(idiomsList, quizId);
             const currentResult = customMode.results.value[customMode.currentIndex.value];
             answer.value = customMode.currentIdiom.value!;
             guesses.value = currentResult?.guesses || [];
             gameWon.value = currentResult?.won || false;
-            gameFailed.value = currentResult?.completed && !currentResult.won;
+            gameFailed.value = (currentResult?.completed && !currentResult.won) || false;
             elapsedTime.value = currentResult?.time || 0;
             if (currentResult?.time) {
                 const minutes = Math.floor(currentResult.time / 60);
@@ -343,7 +343,7 @@ const handleSubmit = () => {
     }
 
     guesses.value.push(currentInput.value);
-    
+
     // 自定义模式下每次提交都保存进度（不改变完成状态）
     if (customMode.isActive.value) {
         customMode.saveCurrentProgress(guesses.value);
@@ -414,6 +414,22 @@ const closeCreateQuiz = () => {
     showCreateQuiz.value = false;
 };
 
+const isAllCompleted = computed(() => {
+    if (!customMode.isActive.value) return false;
+    return customMode.results.value.every(r => r.completed);
+});
+
+const totalStats = computed(() => {
+    if (!customMode.isActive.value) return { totalAttempts: 0, totalTime: 0 };
+    const totalAttempts = customMode.results.value.reduce((sum, r) => sum + r.guesses.length, 0);
+    const totalTime = customMode.results.value.reduce((sum, r) => sum + r.time, 0);
+    return { totalAttempts, totalTime };
+});
+
+const showCompletionDialog = () => {
+    showCongrats.value = true;
+};
+
 </script>
 
 <template>
@@ -432,7 +448,8 @@ const closeCreateQuiz = () => {
         <div v-else-if="guessedList.length > 0" class="progress">（你已完成 {{ guessedList.length }} 题）</div>
 
         <ProgressNav v-if="customMode.isActive.value" :results="customMode.results.value"
-            :currentIndex="customMode.currentIndex.value" :viewIndex="customMode.viewIndex.value" @jumpTo="handleJumpTo" />
+            :currentIndex="customMode.currentIndex.value" :viewIndex="customMode.viewIndex.value"
+            @jumpTo="handleJumpTo" />
 
         <div class="guesses">
             <div v-for="(guess, guessIndex) in guessesWithPinyin" :key="guessIndex" class="guess-row">
@@ -453,25 +470,54 @@ const closeCreateQuiz = () => {
                 <div class="congrats-icon">🎉</div>
                 <h2 v-if="customMode.isActive.value">恭喜完成所有自定义题目！</h2>
                 <h2 v-else>恭喜你完成了所有挑战！</h2>
+
+                <div v-if="customMode.isActive.value" class="results-summary">
+                    <div v-for="(result, index) in customMode.results.value" :key="index" class="result-item">
+                        <div class="result-header">
+                            <span class="result-number">第{{ index + 1 }}题</span>
+                            <span class="result-idiom">{{ result.idiom }}</span>
+                            <span :class="['result-status', result.won ? 'success' : 'failed']">
+                                {{ result.won ? '✅' : '❌' }}
+                            </span>
+                        </div>
+                        <div class="result-details">
+                            <span>尝试次数：{{ result.guesses.length }}</span>
+                            <span>用时：{{ Math.floor(result.time / 60) > 0 ? `${Math.floor(result.time /
+                                60)}分${result.time % 60}秒` : `${result.time}秒` }}</span>
+                        </div>
+                    </div>
+                    <div class="total-stats">
+                        <div>总尝试次数：{{ totalStats.totalAttempts }}</div>
+                        <div>总用时：{{ Math.floor(totalStats.totalTime / 60) > 0 ? `${Math.floor(totalStats.totalTime /
+                            60)}分${totalStats.totalTime % 60}秒` : `${totalStats.totalTime}秒` }}</div>
+                    </div>
+                </div>
+
                 <p v-if="customMode.isActive.value">是否退出自定义模式？</p>
                 <p v-else>是否重新开始？</p>
                 <div class="congrats-buttons">
                     <button v-if="customMode.isActive.value" @click="exitCustomMode">退出</button>
                     <button v-else @click="resetAll">重新开始</button>
+                    <button v-if="customMode.isActive.value" @click="showCongrats = false"
+                        class="cancel-btn">取消</button>
                 </div>
             </div>
         </div>
 
         <div v-if="gameFailed" class="message failed">
             😔 很遗憾，没有猜对！
-            <button v-if="!customMode.isActive.value || customMode.viewIndex.value === customMode.currentIndex.value" @click="startNewIdiom">下一题</button>
+            <button v-if="!customMode.isActive.value || customMode.viewIndex.value === customMode.currentIndex.value"
+                @click="isAllCompleted ? showCompletionDialog() : startNewIdiom()">{{ isAllCompleted ? '完成' : '下一题'
+                }}</button>
         </div>
 
         <div v-if="gameWon" class="message">
             🎉 恭喜你猜对了！
             <div>用时：{{ elapsedTimeStr }}<span v-if="elapsedTime === 0">(你一定开挂了!)</span></div>
-            <div v-if="!customMode.isActive.value || customMode.viewIndex.value === customMode.currentIndex.value" class="action-buttons">
-                <button @click="startNewIdiom">下一题</button>
+            <div v-if="!customMode.isActive.value || customMode.viewIndex.value === customMode.currentIndex.value"
+                class="action-buttons">
+                <button @click="isAllCompleted ? showCompletionDialog() : startNewIdiom()">{{ isAllCompleted ? '完成' :
+                    '下一题' }}</button>
                 <button v-if="!customMode.isActive.value" @click="shareCurrent" class="share-question-btn"
                     title="分享当前题目">📤 分享题目</button>
             </div>
@@ -657,7 +703,9 @@ button:hover {
     padding: 40px;
     border-radius: 20px;
     text-align: center;
-    max-width: 400px;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
     animation: scaleIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
@@ -683,6 +731,76 @@ button:hover {
     display: flex;
     gap: 10px;
     justify-content: center;
+}
+
+.cancel-btn {
+    background: #9e9e9e;
+}
+
+.cancel-btn:hover {
+    background: #757575;
+}
+
+.results-summary {
+    margin: 20px 0;
+    text-align: left;
+}
+
+.result-item {
+    background: #f5f5f5;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
+.result-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.result-number {
+    font-weight: bold;
+    color: #666;
+}
+
+.result-idiom {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    flex: 1;
+}
+
+.result-status {
+    font-size: 20px;
+}
+
+.result-status.success {
+    color: #4caf50;
+}
+
+.result-status.failed {
+    color: #f44336;
+}
+
+.result-details {
+    display: flex;
+    gap: 15px;
+    font-size: 14px;
+    color: #666;
+}
+
+.total-stats {
+    margin-top: 15px;
+    padding: 15px;
+    background: #e3f2fd;
+    border-radius: 8px;
+    font-weight: bold;
+    color: #1976d2;
+    display: flex;
+    justify-content: space-around;
+    font-size: 16px;
 }
 
 @keyframes fadeIn {

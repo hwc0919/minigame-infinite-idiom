@@ -62,10 +62,24 @@ export function useCustomMode() {
         if (saved) {
             try {
                 const data = JSON.parse(saved);
+                // 确保 results 数组与 idioms 数组长度一致
+                const results = idioms.map((idiom, index) => {
+                    const savedResult = data.results[index];
+                    if (savedResult) {
+                        return savedResult;
+                    }
+                    return {
+                        idiom,
+                        guesses: [],
+                        won: false,
+                        time: 0,
+                        completed: false
+                    };
+                });
                 state.value = {
                     idioms,
-                    currentIndex: data.currentIndex,
-                    results: data.results
+                    currentIndex: Math.min(data.currentIndex, idioms.length - 1),
+                    results
                 };
                 return;
             } catch { }
@@ -129,7 +143,7 @@ export function useCustomMode() {
     const saveCurrentProgress = (guesses: string[]) => {
         if (!state.value) return;
 
-        const current = state.value.results[state.value.currentIndex];
+        const current = state.value.results[state.value.currentIndex]!;
         state.value.results[state.value.currentIndex] = {
             ...current,
             guesses: [...guesses]
@@ -140,9 +154,14 @@ export function useCustomMode() {
     const nextIdiom = (): boolean => {
         if (!state.value) return false;
 
+        // 检查是否还有下一题
+        if (state.value.currentIndex >= state.value.idioms.length - 1) {
+            return false;
+        }
+
         state.value.currentIndex++;
         save();
-        return state.value.currentIndex < state.value.idioms.length;
+        return true;
     };
 
     const jumpToIdiom = (index: number) => {
