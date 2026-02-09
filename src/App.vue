@@ -116,6 +116,33 @@ const resetAll = () => {
 
 const initGame = () => {
     guessedList.value = JSON.parse(localStorage.getItem('guessedIdioms') || '[]');
+
+    // Check for shared idiom in URL hash
+    const hash = window.location.hash.slice(1);
+    const hashParams = new URLSearchParams(hash);
+    const sharedIdiom = hashParams.get('idiom');
+
+    if (sharedIdiom) {
+        try {
+            const decrypted = decryptIdiom(sharedIdiom);
+            if (idioms.includes(decrypted)) {
+                answer.value = decrypted;
+                startTime.value = 0;
+                guesses.value = [];
+                currentInput.value = '';
+                gameWon.value = false;
+                elapsedTimeStr.value = '';
+                elapsedTime.value = 0;
+                saveGameState();
+                // Clear hash
+                window.history.replaceState({}, '', window.location.pathname);
+                return;
+            }
+        } catch {
+            // Invalid shared link, continue with normal flow
+        }
+    }
+
     const savedState = sessionStorage.getItem('gameState');
 
     if (savedState) {
@@ -401,7 +428,7 @@ interface GuessWithData {
 }
 
 const guessesWithPinyin = computed<GuessWithData[]>(() => {
-    return guesses.value.map(guess => {
+    return guesses.value.map((guess: string) => {
         const parsed = parseIdiom(guess);
         let matches: CharMatch[] = [];
         try {
@@ -458,11 +485,27 @@ const handleSubmit = () => {
     currentInput.value = '';
 };
 
+const shareCurrent = async () => {
+    const encrypted = encryptIdiom(answer.value);
+    const url = `${window.location.origin}${window.location.pathname}#idiom=${encrypted}&key_id=1`;
+    await navigator.clipboard.writeText(url);
+    alert('题目链接已复制到剪贴板！');
+};
+
+const shareWebpage = async () => {
+    const url = `${window.location.origin}${window.location.pathname}`;
+    await navigator.clipboard.writeText(url);
+    alert('网页链接已复制到剪贴板！');
+};
+
 </script>
 
 <template>
     <div class="game">
-        <h1>猜成语</h1>
+        <div class="header">
+            <h1>猜成语</h1>
+            <button @click="shareWebpage" class="share-btn" title="分享网页">🔗</button>
+        </div>
         <div v-if="guessedList.length > 0" class="progress">（你已完成 {{ guessedList.length }} 题）</div>
 
         <div class="guesses">
@@ -491,7 +534,10 @@ const handleSubmit = () => {
         <div v-if="gameWon" class="message">
             🎉 恭喜你猜对了！
             <div>用时：{{ elapsedTimeStr }}<span v-if="elapsedTime === 0">(你一定开挂了!)</span></div>
-            <button @click="startNewIdiom">下一题</button>
+            <div class="action-buttons">
+                <button @click="startNewIdiom">下一题</button>
+                <button @click="shareCurrent" class="share-question-btn" title="分享当前题目">📤 分享题目</button>
+            </div>
         </div>
 
         <div v-if="!gameWon" class="input-area">
@@ -509,9 +555,49 @@ const handleSubmit = () => {
     text-align: center;
 }
 
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 10px;
+    position: relative;
+}
+
 h1 {
     color: #333;
-    margin-bottom: 10px;
+    margin: 0;
+}
+
+.share-btn {
+    background: transparent;
+    border: 1px solid #ddd;
+    font-size: 18px;
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.share-btn:hover {
+    background: #f5f5f5;
+    border-color: #00bcd4;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 15px;
+}
+
+.share-question-btn {
+    background: #ff9800;
+    font-size: 14px;
+}
+
+.share-question-btn:hover {
+    background: #f57c00;
 }
 
 .progress {
@@ -564,6 +650,12 @@ button:hover {
     font-size: 20px;
     color: #4caf50;
     font-weight: bold;
+}
+
+@media (max-width: 480px) {
+    .action-buttons {
+        flex-direction: column;
+    }
 }
 
 .congrats-modal {
