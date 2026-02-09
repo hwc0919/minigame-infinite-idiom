@@ -104,11 +104,15 @@ const compareIdioms = (guess0: CharWithPinyin[], answer0: CharWithPinyin[]): Cha
     };
 
     // 先逐字对比
+    // 先比较相同位置
+    for (let i = 0; i < guess.length; i++) {
+        charCmp(i, i);
+    }
+    // 再比较所有位置
     for (let i = 0; i < guess.length; i++) {
         for (let j = 0; j < answer.length; j++) {
-            if (charCmp(i, j)) {
-                break;
-            }
+            if (i === j) continue; // 跳过相同位置
+            if (charCmp(i, j)) break;
         }
     }
 
@@ -140,10 +144,12 @@ const compareIdioms = (guess0: CharWithPinyin[], answer0: CharWithPinyin[]): Cha
     };
 
     for (let i = 0; i < guess.length; i++) {
+        pinyinCmp(i, i);
+    }
+    for (let i = 0; i < guess.length; i++) {
         for (let j = 0; j < answer.length; j++) {
-            if (pinyinCmp(i, j)) {
-                break;
-            }
+            if (i === j) continue;
+            if (pinyinCmp(i, j)) break;
         }
     }
 
@@ -170,10 +176,12 @@ const compareIdioms = (guess0: CharWithPinyin[], answer0: CharWithPinyin[]): Cha
     };
 
     for (let i = 0; i < guess.length; i++) {
+        pinyin2Cmp(i, i);
+    }
+    for (let i = 0; i < guess.length; i++) {
         for (let j = 0; j < answer.length; j++) {
-            if (pinyin2Cmp(i, j)) {
-                break;
-            }
+            if (i === j) continue;
+            if (pinyin2Cmp(i, j)) break;
         }
     }
 
@@ -194,10 +202,12 @@ const compareIdioms = (guess0: CharWithPinyin[], answer0: CharWithPinyin[]): Cha
     };
 
     for (let i = 0; i < guess.length; i++) {
+        pinyinInitialCmp(i, i);
+    }
+    for (let i = 0; i < guess.length; i++) {
         for (let j = 0; j < answer.length; j++) {
-            if (pinyinInitialCmp(i, j)) {
-                break;
-            }
+            if (i === j) continue;
+            if (pinyinInitialCmp(i, j)) break;
         }
     }
 
@@ -218,10 +228,12 @@ const compareIdioms = (guess0: CharWithPinyin[], answer0: CharWithPinyin[]): Cha
     };
 
     for (let i = 0; i < guess.length; i++) {
+        pinyinFinalCmp(i, i);
+    }
+    for (let i = 0; i < guess.length; i++) {
         for (let j = 0; j < answer.length; j++) {
-            if (pinyinFinalCmp(i, j)) {
-                break;
-            }
+            if (i === j) continue;
+            if (pinyinFinalCmp(i, j)) break;
         }
     }
 
@@ -241,10 +253,12 @@ const compareIdioms = (guess0: CharWithPinyin[], answer0: CharWithPinyin[]): Cha
         return 0;
     };
     for (let i = 0; i < guess.length; i++) {
+        pinyinToneCmp(i, i);
+    }
+    for (let i = 0; i < guess.length; i++) {
         for (let j = 0; j < answer.length; j++) {
-            if (pinyinToneCmp(i, j)) {
-                break;
-            }
+            if (i === j) continue;
+            if (pinyinToneCmp(i, j)) break;
         }
     }
 
@@ -304,7 +318,7 @@ const restart = () => {
         <div class="guesses">
             <div v-for="(guess, guessIndex) in guessesWithPinyin" :key="guessIndex" class="guess-row">
                 <CharBox v-for="(char, charIndex) in guess.chars" :key="charIndex" :char="char"
-                    :pinyin="guess.pinyins[charIndex]" :match="guess.matches[charIndex]" />
+                    :pinyin="guess.pinyins[charIndex]!" :match="guess.matches[charIndex]!" />
             </div>
         </div>
 
