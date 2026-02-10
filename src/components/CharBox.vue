@@ -33,15 +33,24 @@ const tonePositions: Record<string, [number, boolean]> = {
 
 const toneDisplay = ref<'symbol' | 'number'>('symbol');
 
-const getToneDisplay = (tone: string) => {
-    if (toneDisplay.value === 'number') {
-        return tone;
-    }
-    return toneSymbols[tone] || '';
+const getToneSvg = (tone: string) => {
+    const svgs: Record<string, string> = {
+        '1': `<svg width="10" height="5" viewBox="0 0 10 5"><line x1="1" y1="2.5" x2="7" y2="2.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
+        '2': `<svg width="10" height="5" viewBox="0 0 10 5"><line x1="2" y1="4" x2="6" y2="1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+        '3': `<svg width="10" height="5" viewBox="0 0 10 5"><polyline points="1,1.5 4,3.5 7,1.5" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+        '4': `<svg width="10" height="5" viewBox="0 0 10 5"><line x1="2" y1="1" x2="6" y2="4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`
+    };
+    return svgs[tone] || '';
 };
 
 const getTonePosition = (final: string): [number, boolean] => {
     return tonePositions[final] ?? [0, false];
+};
+
+const getToneLeftPosition = (final: string): string => {
+    const [pos] = getTonePosition(final);
+    // 使用 ch 单位（字符宽度）更精确
+    return pos + 'ch';
 };
 
 const getFinalDisplay = (final: string, hasTone: boolean): string => {
@@ -94,8 +103,9 @@ onUnmounted(() => {
                     present: match.pinyin.tone === 1,
                     'tone-symbol': toneDisplay === 'symbol',
                     'tone-number': toneDisplay === 'number'
-                }" :style="toneDisplay === 'symbol' ? { left: getTonePosition(pinyin.final)[0] * 0.6 + 'em' } : {}">
-                    {{ getToneDisplay(pinyin.tone) }}
+                }" :style="toneDisplay === 'symbol' ? { left: getToneLeftPosition(pinyin.final) } : {}">
+                    <span v-if="toneDisplay === 'number'">{{ pinyin.tone }}</span>
+                    <span v-else v-html="getToneSvg(pinyin.tone)"></span>
                 </span>
             </span>
         </div>
@@ -182,15 +192,12 @@ onUnmounted(() => {
     display: inline;
 }
 
-.pinyin .tone {
-    line-height: 1;
-}
-
 .pinyin .tone.tone-symbol {
     position: absolute;
-    top: 0;
+    top: -10px;
     left: 0;
-    transform: scale(1.2, 1);
+    width: 10px;
+    height: 5px;
 }
 
 .pinyin .tone.tone-number {
