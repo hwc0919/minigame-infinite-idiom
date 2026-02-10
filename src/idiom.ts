@@ -66,19 +66,12 @@ export const parseIdiom = (idiom: string): CharWithPinyin[] => {
     const finals = pinyin(idiom, { pattern: 'final', toneType: 'none', type: 'array' }) as string[];
     const toneNums = pinyin(idiom, { pattern: 'num', type: 'array' }) as (string | undefined)[];
 
-    const toneSymbols: Record<string, string> = {
-        '1': '\u02C9',
-        '2': '\u02CA',
-        '3': '\u02C7',
-        '4': '\u02CB',
-    };
-
     return chars.map((char, index) => ({
         char,
         pinyin: {
             initial: initials[index] || '',
             final: finals[index] || '',
-            tone: toneSymbols[toneNums[index] || ''] || ''
+            tone: toneNums[index] || ''
         }
     }));
 };

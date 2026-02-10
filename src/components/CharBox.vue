@@ -11,6 +11,15 @@ interface Props {
 }
 
 defineProps<Props>();
+
+const toneSymbols: Record<string, string> = {
+    '1': '\u02C9',
+    '2': '\u02CA',
+    '3': '\u02C7',
+    '4': '\u02CB',
+};
+
+const getToneSymbol = (tone: string) => toneSymbols[tone] || '';
 </script>
 
 <template>
@@ -23,7 +32,7 @@ defineProps<Props>();
                 {{ pinyin.final }}
             </span>
             <span class="tone" :class="{ correct: match.pinyin.tone === 2, present: match.pinyin.tone === 1 }">
-                {{ pinyin.tone }}
+                {{ getToneSymbol(pinyin.tone) }}
             </span>
         </div>
         <div class="char">{{ char }}</div>
