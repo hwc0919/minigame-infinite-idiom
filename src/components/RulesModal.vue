@@ -49,8 +49,8 @@ const examples = [
 </script>
 
 <template>
-    <div v-if="show" class="modal-overlay" @click="emit('close')">
-        <div class="modal-content" @click.stop>
+    <div v-if="show" class="modal-overlay" @click="emit('close')" @wheel.stop @touchmove.stop>
+        <div class="modal-content" @click.stop @wheel.stop @touchmove.stop>
             <h2>游戏规则</h2>
             <div class="rules">
                 <p>你有十次的机会猜一个 <strong>四字词语</strong></p>
