@@ -5,6 +5,7 @@ import CreateQuizModal from './components/CreateQuizModal.vue';
 import ProgressNav from './components/ProgressNav.vue';
 import RulesModal from './components/RulesModal.vue';
 import SettingsModal from './components/SettingsModal.vue';
+import ShareModal from './components/ShareModal.vue';
 import { idioms } from './assets/idioms';
 import {
     type GameState,
@@ -35,6 +36,7 @@ const showCongrats = ref(false);
 const showCreateQuiz = ref(false);
 const showRules = ref(false);
 const showSettings = ref(false);
+const showShare = ref(false);
 
 const MAX_ATTEMPTS = 10;
 
@@ -413,6 +415,15 @@ const shareWebpage = async () => {
     const url = `${window.location.origin}${window.location.pathname}`;
     await navigator.clipboard.writeText(url);
     alert('网页链接已复制到剪贴板！');
+    showShare.value = false;
+};
+
+const openShare = () => {
+    showShare.value = true;
+};
+
+const closeShare = () => {
+    showShare.value = false;
 };
 
 const openCreateQuiz = () => {
@@ -467,7 +478,7 @@ const showCompletionDialog = () => {
             <h1>猜成语</h1>
             <div class="header-buttons">
                 <button @click="openCreateQuiz" class="share-btn" title="手动出题">✏️</button>
-                <button @click="shareWebpage" class="share-btn" title="分享网页">🔗</button>
+                <button @click="openShare" class="share-btn" title="分享">🔗</button>
             </div>
         </div>
         <div v-if="customMode.isActive.value" class="custom-mode-header">
@@ -495,6 +506,7 @@ const showCompletionDialog = () => {
         <CreateQuizModal :show="showCreateQuiz" :encryptFn="encryptIdiom" @close="closeCreateQuiz" />
         <RulesModal :show="showRules" @close="closeRules" />
         <SettingsModal :show="showSettings" @close="closeSettings" />
+        <ShareModal :show="showShare" @close="closeShare" @copyLink="shareWebpage" />
 
         <div v-if="showCongrats" class="congrats-modal">
             <div class="congrats-content">
