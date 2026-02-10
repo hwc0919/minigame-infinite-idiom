@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import CharBox from './components/CharBox.vue';
 import CreateQuizModal from './components/CreateQuizModal.vue';
 import ProgressNav from './components/ProgressNav.vue';
+import RulesModal from './components/RulesModal.vue';
 import { idioms } from './assets/idioms';
 import {
     type GameState,
@@ -31,6 +32,7 @@ const elapsedTime = ref(0);
 const startTime = ref(0);
 const showCongrats = ref(false);
 const showCreateQuiz = ref(false);
+const showRules = ref(false);
 
 const MAX_ATTEMPTS = 10;
 
@@ -419,6 +421,14 @@ const closeCreateQuiz = () => {
     showCreateQuiz.value = false;
 };
 
+const openRules = () => {
+    showRules.value = true;
+};
+
+const closeRules = () => {
+    showRules.value = false;
+};
+
 const isAllCompleted = computed(() => {
     if (!customMode.isActive.value) return false;
     return customMode.results.value.every(r => r.completed);
@@ -440,6 +450,9 @@ const showCompletionDialog = () => {
 <template>
     <div class="game">
         <div class="header">
+            <div class="header-buttons">
+                <button @click="openRules" class="share-btn" title="游戏规则">ℹ️</button>
+            </div>
             <h1>猜成语</h1>
             <div class="header-buttons">
                 <button @click="openCreateQuiz" class="share-btn" title="手动出题">✏️</button>
@@ -469,6 +482,7 @@ const showCompletionDialog = () => {
         </div>
 
         <CreateQuizModal :show="showCreateQuiz" :encryptFn="encryptIdiom" @close="closeCreateQuiz" />
+        <RulesModal :show="showRules" @close="closeRules" />
 
         <div v-if="showCongrats" class="congrats-modal">
             <div class="congrats-content">
@@ -549,15 +563,16 @@ const showCompletionDialog = () => {
 .header {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 15px;
+    justify-content: space-between;
     margin-bottom: 10px;
-    position: relative;
 }
 
 h1 {
     color: #333;
     margin: 0;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .header-buttons {
