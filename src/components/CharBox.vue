@@ -3,6 +3,7 @@ import {
     type PinyinParts,
     type CharMatch,
 } from '../idiom'
+import { ref, onMounted, onUnmounted } from 'vue';
 
 interface Props {
     char: string;
@@ -19,7 +20,36 @@ const toneSymbols: Record<string, string> = {
     '4': '\u02CB',
 };
 
-const getToneSymbol = (tone: string) => toneSymbols[tone] || '';
+const toneDisplay = ref<'symbol' | 'number'>('symbol');
+
+const getToneDisplay = (tone: string) => {
+    if (toneDisplay.value === 'number') {
+        return tone;
+    }
+    return toneSymbols[tone] || '';
+};
+
+const handleToneDisplayChange = (event: Event) => {
+    const customEvent = event as CustomEvent;
+    toneDisplay.value = customEvent.detail;
+};
+
+onMounted(() => {
+    const settings = localStorage.getItem('settings');
+    if (settings) {
+        try {
+            const parsed = JSON.parse(settings);
+            toneDisplay.value = parsed.toneDisplay || 'symbol';
+        } catch {
+            toneDisplay.value = 'symbol';
+        }
+    }
+    window.addEventListener('toneDisplayChange', handleToneDisplayChange);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('toneDisplayChange', handleToneDisplayChange);
+});
 </script>
 
 <template>
@@ -31,8 +61,9 @@ const getToneSymbol = (tone: string) => toneSymbols[tone] || '';
             <span class="final" :class="{ correct: match.pinyin.final === 2, present: match.pinyin.final === 1 }">
                 {{ pinyin.final }}
             </span>
-            <span class="tone" :class="{ correct: match.pinyin.tone === 2, present: match.pinyin.tone === 1 }">
-                {{ getToneSymbol(pinyin.tone) }}
+            <span class="tone"
+                :class="{ correct: match.pinyin.tone === 2, present: match.pinyin.tone === 1, 'tone-symbol': toneDisplay === 'symbol' }">
+                {{ getToneDisplay(pinyin.tone) }}
             </span>
         </div>
         <div class="char">{{ char }}</div>
@@ -84,7 +115,7 @@ const getToneSymbol = (tone: string) => toneSymbols[tone] || '';
 .pinyin .final.present,
 .pinyin .tone.present {
     color: #ff9800;
-    font-weight: bold;
+    /* font-weight: bold; */
 }
 
 .char-box.correct .pinyin .initial.correct,
@@ -102,8 +133,17 @@ const getToneSymbol = (tone: string) => toneSymbols[tone] || '';
 }
 
 .pinyin {
-    font-size: 14px;
+    font-size: 16px;
     color: #666;
+}
+
+.pinyin .tone {
+    margin-left: 2px;
+}
+
+.pinyin .tone.tone-symbol {
+    transform: scale(1.2, 1);
+    display: inline-block;
 }
 
 .char {
