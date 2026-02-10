@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import CharBox from './components/CharBox.vue';
 import CreateQuizModal from './components/CreateQuizModal.vue';
+import HintPanel from './components/HintPanel.vue';
 import ProgressNav from './components/ProgressNav.vue';
 import RulesModal from './components/RulesModal.vue';
 import SettingsModal from './components/SettingsModal.vue';
@@ -37,6 +38,7 @@ const showCreateQuiz = ref(false);
 const showRules = ref(false);
 const showSettings = ref(false);
 const showShare = ref(false);
+const showHint = ref(false);
 
 const MAX_ATTEMPTS = 10;
 
@@ -572,7 +574,10 @@ const showCompletionDialog = () => {
                 <button @click="handleSubmit">确定</button>
             </div>
             <div class="attempts-left">剩余尝试次数：{{ MAX_ATTEMPTS - guesses.length }}</div>
+            <a href="#" @click.prevent="showHint = !showHint" class="hint-link">{{ showHint ? '隐藏提示' : '显示提示' }}</a>
         </div>
+
+        <HintPanel v-if="showHint && !gameWon && !gameFailed" :guesses="guessesWithPinyin" />
     </div>
 </template>
 
@@ -709,6 +714,18 @@ button {
 
 button:hover {
     background: #0097a7;
+}
+
+.hint-link {
+    color: #00bcd4;
+    text-decoration: none;
+    font-size: 14px;
+    margin-top: 8px;
+    display: inline-block;
+}
+
+.hint-link:hover {
+    text-decoration: underline;
 }
 
 .message {
