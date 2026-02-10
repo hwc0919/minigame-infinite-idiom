@@ -35,7 +35,7 @@ const toneDisplay = ref<'symbol' | 'number'>('symbol');
 
 const getToneSvg = (tone: string) => {
     const svgs: Record<string, string> = {
-        '1': `<svg width="10" height="5" viewBox="0 0 10 5"><line x1="1" y1="2.5" x2="7" y2="2.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
+        '1': `<svg width="10" height="5" viewBox="0 0 10 5"><line x1="1.5" y1="2.5" x2="6.5" y2="2.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
         '2': `<svg width="10" height="5" viewBox="0 0 10 5"><line x1="2" y1="4" x2="6" y2="1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
         '3': `<svg width="10" height="5" viewBox="0 0 10 5"><polyline points="1,1.5 4,3.5 7,1.5" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
         '4': `<svg width="10" height="5" viewBox="0 0 10 5"><line x1="2" y1="1" x2="6" y2="4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`
