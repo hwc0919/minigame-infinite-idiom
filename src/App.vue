@@ -281,12 +281,12 @@ const initGame = async () => {
 
             if (isGameWon) {
                 gameWon.value = true;
-                if (startTime.value > 0) {
-                    const seconds = Math.floor((Date.now() - startTime.value) / 1000);
-                    const minutes = Math.floor(seconds / 60);
-                    const remainingSeconds = seconds % 60;
-                    elapsedTime.value = seconds;
-                    elapsedTimeStr.value = minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
+                const history = guessedHistory.value[answer.value];
+                if (history) {
+                    elapsedTime.value = history.usedTime;
+                    const minutes = Math.floor(history.usedTime / 60);
+                    const seconds = history.usedTime % 60;
+                    elapsedTimeStr.value = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
                 }
             }
 
