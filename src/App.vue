@@ -506,10 +506,22 @@ const showCompletionDialog = () => {
 // 桌面宠物
 const showPetDialog = ref(false);
 const showDonateQR = ref(false);
+const petHidden = ref(false);
 
 const closePetDialog = () => showPetDialog.value = false;
 const openDonate = () => showDonateQR.value = true;
 const closeDonate = () => showDonateQR.value = false;
+const hidePet = () => {
+    petHidden.value = true;
+    closePetDialog();
+};
+const handlePetClick = () => {
+    if (petHidden.value) {
+        petHidden.value = false;
+    } else {
+        showPetDialog.value = true;
+    }
+};
 
 </script>
 
@@ -553,9 +565,9 @@ const closeDonate = () => showDonateQR.value = false;
         <SettingsModal :show="showSettings" @close="closeSettings" />
         <ShareModal :show="showShare" @close="closeShare" @copyLink="shareWebpage" @shareQuestion="shareCurrent" />
 
-        <CongratsModal :show="showCongrats" :isCustomMode="customMode.isActive.value" :results="customMode.results.value"
-            :totalAttempts="totalStats.totalAttempts" :totalTime="totalStats.totalTime" @close="showCongrats = false"
-            @exit="exitCustomMode" @reset="resetAll" />
+        <CongratsModal :show="showCongrats" :isCustomMode="customMode.isActive.value"
+            :results="customMode.results.value" :totalAttempts="totalStats.totalAttempts"
+            :totalTime="totalStats.totalTime" @close="showCongrats = false" @exit="exitCustomMode" @reset="resetAll" />
 
         <div v-if="gameFailed" class="message failed">
             😔 很遗憾，没有猜对！
@@ -591,7 +603,8 @@ const closeDonate = () => showDonateQR.value = false;
 
         <HintPanel v-if="showHint && !gameWon && !gameFailed" :guesses="guessesWithPinyin" />
 
-        <div class="pet" @click="showPetDialog = true" v-show="guessedList.length >= 3">🐱</div>
+        <div class="pet" :class="{ 'pet-hidden': petHidden }" @click="handlePetClick" v-show="guessedList.length >= 3">
+            🐱</div>
 
         <div v-if="showPetDialog" class="modal-overlay" @click="closePetDialog">
             <div class="pet-dialog" @click.stop>
@@ -599,6 +612,7 @@ const closeDonate = () => showDonateQR.value = false;
                 <p>加油哦！你已经成功答对 {{ successList.length }} 题啦！</p>
                 <div class="action-buttons">
                     <button @click="openDonate">🎁 打赏作者</button>
+                    <button @click="hidePet" class="hide-pet-btn hide-pet-btn-mobile">隐藏</button>
                 </div>
             </div>
         </div>
@@ -769,7 +783,7 @@ button:hover {
     background: white;
     padding: 30px;
     border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     text-align: center;
     max-width: 300px;
 }
@@ -798,22 +812,43 @@ button:hover {
 }
 
 .pet {
+    user-select: none;
     position: fixed;
     bottom: 20px;
     right: 20px;
     font-size: 48px;
     cursor: pointer;
     z-index: 9999;
-    transition: transform 0.2s;
+    transition: transform 0.2s, right 0.3s;
 }
 
 .pet:hover {
     transform: scale(1.2);
 }
 
+.hide-pet-btn {
+    background: #9e9e9e;
+}
+
+.hide-pet-btn:hover {
+    background: #757575;
+}
+
+.hide-pet-btn-mobile {
+    display: none;
+}
+
 @media (max-width: 480px) {
     .action-buttons {
         flex-direction: column;
+    }
+
+    .hide-pet-btn-mobile {
+        display: inline-block;
+    }
+
+    .pet.pet-hidden {
+        right: -40px;
     }
 }
 </style>
