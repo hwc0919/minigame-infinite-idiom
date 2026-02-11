@@ -506,18 +506,20 @@ const showCompletionDialog = () => {
 // 桌面宠物
 const showPetDialog = ref(false);
 const showDonateQR = ref(false);
-const petHidden = ref(false);
+const petHidden = ref(localStorage.getItem('petHidden') === 'true');
 
 const closePetDialog = () => showPetDialog.value = false;
 const openDonate = () => showDonateQR.value = true;
 const closeDonate = () => showDonateQR.value = false;
 const hidePet = () => {
     petHidden.value = true;
+    localStorage.setItem('petHidden', 'true');
     closePetDialog();
 };
 const handlePetClick = () => {
     if (petHidden.value) {
         petHidden.value = false;
+        localStorage.setItem('petHidden', 'false');
     } else {
         showPetDialog.value = true;
     }
@@ -815,11 +817,11 @@ button:hover {
     user-select: none;
     position: fixed;
     bottom: 20px;
-    right: 20px;
-    font-size: 48px;
+    left: 10px;
+    font-size: 32px;
     cursor: pointer;
     z-index: 9999;
-    transition: transform 0.2s, right 0.3s;
+    transition: transform 0.2s, left 0.3s;
 }
 
 .pet:hover {
@@ -848,7 +850,7 @@ button:hover {
     }
 
     .pet.pet-hidden {
-        right: -40px;
+        left: -30px;
     }
 }
 </style>
