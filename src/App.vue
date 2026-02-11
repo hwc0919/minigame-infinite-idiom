@@ -8,6 +8,7 @@ import ProgressNav from './components/ProgressNav.vue';
 import RulesModal from './components/RulesModal.vue';
 import SettingsModal from './components/SettingsModal.vue';
 import ShareModal from './components/ShareModal.vue';
+import DonateModal from './components/DonateModal.vue';
 import { idioms } from './assets/idioms';
 import {
     type GameState,
@@ -21,6 +22,11 @@ import {
     compareIdioms
 } from './idiom';
 import { useCustomMode } from './composables/useCustomMode';
+
+import alipayQRBase64 from './assets/images/alipay_qr.txt?raw';
+import wechatQRBase64 from './assets/images/wechat_qr.txt?raw';
+const alipayQR = `data:image/png;base64,${alipayQRBase64}`;
+const wechatQR = `data:image/png;base64,${wechatQRBase64}`;
 
 const customMode = useCustomMode();
 
@@ -473,6 +479,14 @@ const showCompletionDialog = () => {
     showCongrats.value = true;
 };
 
+// 桌面宠物
+const showPetDialog = ref(false);
+const showDonateQR = ref(false);
+
+const closePetDialog = () => showPetDialog.value = false;
+const openDonate = () => showDonateQR.value = true;
+const closeDonate = () => showDonateQR.value = false;
+
 </script>
 
 <template>
@@ -552,6 +566,20 @@ const showCompletionDialog = () => {
         </div>
 
         <HintPanel v-if="showHint && !gameWon && !gameFailed" :guesses="guessesWithPinyin" />
+
+        <div class="pet" @click="showPetDialog = true" v-show="guessedList.length >= 3">🐱</div>
+
+        <div v-if="showPetDialog" class="modal-overlay" @click="closePetDialog">
+            <div class="pet-dialog" @click.stop>
+                <h3>🐱 喵~</h3>
+                <p>加油哦！你已经完成了 {{ guessedList.length }} 题啦！</p>
+                <div class="action-buttons">
+                    <button @click="openDonate">🎁 打赏作者</button>
+                </div>
+            </div>
+        </div>
+
+        <DonateModal :show="showDonateQR" :alipayQR="alipayQR" :wechatQR="wechatQR" @close="closeDonate" />
     </div>
 </template>
 
@@ -711,6 +739,52 @@ button:hover {
 
 .message.failed {
     color: #f44336;
+}
+
+.pet-dialog {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    text-align: center;
+    max-width: 300px;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.pet-dialog h3 {
+    margin: 0 0 15px 0;
+    font-size: 24px;
+}
+
+.pet-dialog p {
+    margin: 0 0 20px 0;
+    color: #666;
+}
+
+.pet {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    font-size: 48px;
+    cursor: pointer;
+    z-index: 9999;
+    transition: transform 0.2s;
+}
+
+.pet:hover {
+    transform: scale(1.2);
 }
 
 @media (max-width: 480px) {
