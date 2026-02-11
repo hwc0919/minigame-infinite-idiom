@@ -49,7 +49,7 @@ const examples = [
 </script>
 
 <template>
-    <div v-if="show" class="modal-overlay" @click="emit('close')" @wheel.stop @touchmove.stop>
+    <div v-if="show" class="modal-overlay" @click="emit('close')" @wheel.prevent @touchmove.prevent>
         <div class="modal-content" @click.stop @wheel.stop @touchmove.stop>
             <h2>游戏规则</h2>
             <div class="rules">
@@ -89,7 +89,7 @@ const examples = [
     border-radius: 8px;
     max-width: 450px;
     width: 90%;
-    max-height: 85vh;
+    max-height: 80vh;
     overflow-y: auto;
 }
 
