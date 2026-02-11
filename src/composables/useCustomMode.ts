@@ -17,6 +17,7 @@ interface CustomModeState {
 
 const state = ref<CustomModeState | null>(null);
 let quizId: string | null = null;
+let shareMode = false; // 标记是否为分享模式
 const viewingIndex = ref<number | null>(null); // 当前查看的题目索引
 
 async function generateQuizId(idioms: string[]): Promise<string> {
@@ -55,8 +56,9 @@ export function useCustomMode() {
         state.value ? state.value.currentIndex >= state.value.idioms.length : false
     );
 
-    const init = async (idioms: string[], id?: string) => {
+    const init = async (idioms: string[], id?: string, shared = false) => {
         quizId = id || await generateQuizId(idioms);
+        shareMode = shared;
 
         const saved = localStorage.getItem(`customQuiz_${quizId}`);
         if (saved) {
@@ -179,8 +181,11 @@ export function useCustomMode() {
         }
         state.value = null;
         quizId = null;
+        shareMode = false;
         viewingIndex.value = null;
     };
+
+    const isShareMode = () => shareMode;
 
     return {
         isActive,
@@ -199,6 +204,7 @@ export function useCustomMode() {
         jumpToIdiom,
         backToCurrent,
         exit,
-        save
+        save,
+        isShareMode
     };
 }

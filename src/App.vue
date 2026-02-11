@@ -173,8 +173,20 @@ const handleJumpTo = (index: number) => {
 
 const exitCustomMode = () => {
     customMode.exit();
+    window.history.replaceState({}, '', window.location.pathname);
     showCongrats.value = false;
     startNewIdiom();
+};
+
+const generateQuizId = async (encryptedList: string[]): Promise<string> => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(encryptedList.join(','));
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => {
+        const hex = b.toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+    }).join('').slice(0, 16);
 };
 
 const initGame = async () => {
@@ -185,22 +197,34 @@ const initGame = async () => {
     const hash = window.location.hash.slice(1);
     const hashParams = new URLSearchParams(hash);
 
-    // Check for custom mode (multiple idioms)
+    // Check for URL hash (custom mode or shared idiom)
     const customIdioms = hashParams.get('idioms');
-    if (customIdioms) {
-        try {
-            const encrypted = JSON.parse(decodeURIComponent(customIdioms));
-            const idiomsList = encrypted.map(decryptIdiom);
-            const encoder = new TextEncoder();
-            const data = encoder.encode(encrypted.join(','));
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const quizId = hashArray.map(b => {
-                const hex = b.toString(16);
-                return hex.length === 1 ? '0' + hex : hex;
-            }).join('').slice(0, 16);
+    const sharedIdiom = hashParams.get('idiom');
 
-            await customMode.init(idiomsList, quizId);
+    if (customIdioms || sharedIdiom) {
+        try {
+            let idiomsList: string[];
+            let encrypted: string[];
+            const isShared = !!sharedIdiom;
+
+            if (isShared) {
+                // Single shared idiom
+                const decrypted = decryptIdiom(sharedIdiom!);
+                if (!idioms.includes(decrypted)) {
+                    throw new Error('Invalid idiom');
+                }
+                idiomsList = [decrypted];
+                encrypted = [sharedIdiom!];
+            } else {
+                // Multiple idioms mode
+                encrypted = JSON.parse(decodeURIComponent(customIdioms!));
+                idiomsList = encrypted.map(decryptIdiom);
+            }
+
+            // Generate quizId for both modes
+            const quizId = await generateQuizId(encrypted);
+
+            await customMode.init(idiomsList, quizId, isShared);
             const currentResult = customMode.results.value[customMode.currentIndex.value];
             answer.value = customMode.currentIdiom.value!;
             guesses.value = currentResult?.guesses || [];
@@ -216,49 +240,7 @@ const initGame = async () => {
             startTime.value = 0;
             return;
         } catch {
-            // Invalid custom mode link
-        }
-    }
-
-    // Check for shared single idiom
-    const sharedIdiom = hashParams.get('idiom');
-
-    if (sharedIdiom) {
-        try {
-            const decrypted = decryptIdiom(sharedIdiom);
-            if (idioms.includes(decrypted)) {
-                answer.value = decrypted;
-
-                // Check if this idiom exists in history
-                const history = guessedHistory.value[decrypted];
-                if (history) {
-                    // Load from history
-                    guesses.value = [...history.guesses];
-                    startTime.value = 0;
-                    gameWon.value = history.won;
-                    gameFailed.value = !history.won;
-                    elapsedTime.value = history.usedTime;
-                    const minutes = Math.floor(history.usedTime / 60);
-                    const seconds = history.usedTime % 60;
-                    elapsedTimeStr.value = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
-                } else {
-                    // New game
-                    startTime.value = 0;
-                    guesses.value = [];
-                    gameWon.value = false;
-                    gameFailed.value = false;
-                    elapsedTimeStr.value = '';
-                    elapsedTime.value = 0;
-                }
-
-                currentInput.value = '';
-                saveGameState();
-                // Clear hash
-                window.history.replaceState({}, '', window.location.pathname);
-                return;
-            }
-        } catch {
-            // Invalid shared link, continue with normal flow
+            // Invalid link, continue with normal flow
         }
     }
 
@@ -373,7 +355,18 @@ const handleSubmit = () => {
         elapsedTime.value = seconds;
         elapsedTimeStr.value = minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
 
-        if (customMode.isActive.value) {
+        if (customMode.isActive.value && customMode.isShareMode()) {
+            // 分享模式下，同步到 guessedList 和 guessedHistory
+            if (!guessedList.value.includes(answer.value)) {
+                guessedList.value.push(answer.value);
+                if (guessedList.value.length > 1000) {
+                    guessedList.value.shift();
+                }
+                localStorage.setItem('guessedIdioms', JSON.stringify(guessedList.value));
+            }
+            saveToHistory(true);
+            customMode.updateCurrentResult(guesses.value, true, seconds);
+        } else if (customMode.isActive.value) {
             customMode.updateCurrentResult(guesses.value, true, seconds);
         } else {
             if (!guessedList.value.includes(answer.value)) {
@@ -389,7 +382,18 @@ const handleSubmit = () => {
         gameFailed.value = true;
         const seconds = Math.floor((Date.now() - startTime.value) / 1000);
 
-        if (customMode.isActive.value) {
+        if (customMode.isActive.value && customMode.isShareMode()) {
+            // 分享模式下，同步到 guessedList 和 guessedHistory
+            if (!guessedList.value.includes(answer.value)) {
+                guessedList.value.push(answer.value);
+                if (guessedList.value.length > 1000) {
+                    guessedList.value.shift();
+                }
+                localStorage.setItem('guessedIdioms', JSON.stringify(guessedList.value));
+            }
+            saveToHistory(false);
+            customMode.updateCurrentResult(guesses.value, false, seconds);
+        } else if (customMode.isActive.value) {
             customMode.updateCurrentResult(guesses.value, false, seconds);
         } else {
             if (!guessedList.value.includes(answer.value)) {
@@ -553,7 +557,8 @@ const showCompletionDialog = () => {
             😔 很遗憾，没有猜对！
             <div v-if="!customMode.isActive.value || customMode.viewIndex.value === customMode.currentIndex.value"
                 class="action-buttons">
-                <button @click="isAllCompleted ? showCompletionDialog() : startNewIdiom()">{{ isAllCompleted ? '完成' : '下一题' }}</button>
+                <button @click="isAllCompleted ? showCompletionDialog() : startNewIdiom()">{{ isAllCompleted ? '完成' :
+                    '下一题' }}</button>
                 <button v-if="!customMode.isActive.value" @click="shareCurrent" class="share-question-btn"
                     title="分享当前题目">📤 分享题目</button>
             </div>
