@@ -36,6 +36,7 @@ const currentInput = ref('');
 const gameWon = ref(false);
 const gameFailed = ref(false);
 const guessedList = ref<string[]>([]);
+const successList = ref<string[]>([]);
 const guessedHistory = ref<Record<string, IdiomHistory>>({});
 const elapsedTimeStr = ref('');
 const elapsedTime = ref(0);
@@ -139,8 +140,10 @@ const resetAll = () => {
         customMode.exit();
     }
     guessedList.value = [];
+    successList.value = [];
     guessedHistory.value = {};
     localStorage.setItem('guessedIdioms', '[]');
+    localStorage.setItem('successIdioms', '[]');
     localStorage.setItem('guessedHistory', '{}');
     showCongrats.value = false;
     startNewIdiom();
@@ -198,6 +201,13 @@ const generateQuizId = async (encryptedList: string[]): Promise<string> => {
 
 const initGame = async () => {
     guessedList.value = JSON.parse(localStorage.getItem('guessedIdioms') || '[]');
+    const savedSuccessList = localStorage.getItem('successIdioms');
+    if (savedSuccessList === null) {
+        successList.value = [...guessedList.value];
+        localStorage.setItem('successIdioms', JSON.stringify(successList.value));
+    } else {
+        successList.value = JSON.parse(savedSuccessList);
+    }
     guessedHistory.value = JSON.parse(localStorage.getItem('guessedHistory') || '{}');
 
     // Check for URL hash
@@ -371,6 +381,13 @@ const handleSubmit = () => {
                 }
                 localStorage.setItem('guessedIdioms', JSON.stringify(guessedList.value));
             }
+            if (!successList.value.includes(answer.value)) {
+                successList.value.push(answer.value);
+                if (successList.value.length > 1000) {
+                    successList.value.shift();
+                }
+                localStorage.setItem('successIdioms', JSON.stringify(successList.value));
+            }
             saveToHistory(true);
             customMode.updateCurrentResult(guesses.value, true, seconds);
         } else if (customMode.isActive.value) {
@@ -382,6 +399,13 @@ const handleSubmit = () => {
                     guessedList.value.shift();
                 }
                 localStorage.setItem('guessedIdioms', JSON.stringify(guessedList.value));
+            }
+            if (!successList.value.includes(answer.value)) {
+                successList.value.push(answer.value);
+                if (successList.value.length > 1000) {
+                    successList.value.shift();
+                }
+                localStorage.setItem('successIdioms', JSON.stringify(successList.value));
             }
             saveToHistory(true);
         }
@@ -572,7 +596,7 @@ const closeDonate = () => showDonateQR.value = false;
         <div v-if="showPetDialog" class="modal-overlay" @click="closePetDialog">
             <div class="pet-dialog" @click.stop>
                 <h3>🐱 喵~</h3>
-                <p>加油哦！你已经完成了 {{ guessedList.length }} 题啦！</p>
+                <p>加油哦！你已经成功答对 {{ successList.length }} 题啦！</p>
                 <div class="action-buttons">
                     <button @click="openDonate">🎁 打赏作者</button>
                 </div>
