@@ -508,7 +508,7 @@ const showCompletionDialog = () => {
         <CreateQuizModal :show="showCreateQuiz" :encryptFn="encryptIdiom" @close="closeCreateQuiz" />
         <RulesModal :show="showRules" @close="closeRules" />
         <SettingsModal :show="showSettings" @close="closeSettings" />
-        <ShareModal :show="showShare" @close="closeShare" @copyLink="shareWebpage" />
+        <ShareModal :show="showShare" @close="closeShare" @copyLink="shareWebpage" @shareQuestion="shareCurrent" />
 
         <div v-if="showCongrats" class="congrats-modal">
             <div class="congrats-content">
@@ -551,9 +551,12 @@ const showCompletionDialog = () => {
 
         <div v-if="gameFailed" class="message failed">
             😔 很遗憾，没有猜对！
-            <button v-if="!customMode.isActive.value || customMode.viewIndex.value === customMode.currentIndex.value"
-                @click="isAllCompleted ? showCompletionDialog() : startNewIdiom()">{{ isAllCompleted ? '完成' : '下一题'
-                }}</button>
+            <div v-if="!customMode.isActive.value || customMode.viewIndex.value === customMode.currentIndex.value"
+                class="action-buttons">
+                <button @click="isAllCompleted ? showCompletionDialog() : startNewIdiom()">{{ isAllCompleted ? '完成' : '下一题' }}</button>
+                <button v-if="!customMode.isActive.value" @click="shareCurrent" class="share-question-btn"
+                    title="分享当前题目">📤 分享题目</button>
+            </div>
         </div>
 
         <div v-if="gameWon" class="message">

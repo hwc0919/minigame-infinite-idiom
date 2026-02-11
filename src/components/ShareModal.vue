@@ -7,10 +7,15 @@ defineProps<Props>();
 const emit = defineEmits<{
     close: [];
     copyLink: [];
+    shareQuestion: [];
 }>();
 
 const handleCopyLink = () => {
     emit('copyLink');
+};
+
+const handleShareQuestion = () => {
+    emit('shareQuestion');
 };
 </script>
 
@@ -20,7 +25,10 @@ const handleCopyLink = () => {
             <h2>分享</h2>
             <div class="share-options">
                 <button @click="handleCopyLink" class="share-option">
-                    🔗 复制网页链接
+                    🔗 网站链接
+                </button>
+                <button @click="handleShareQuestion" class="share-option">
+                    📤 当前题目
                 </button>
                 <a href="https://github.com/hwc0919/minigame-infinite-idiom" target="_blank" class="share-option">
                     ⭐ GitHub 仓库
