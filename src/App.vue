@@ -39,6 +39,7 @@ const showRules = ref(false);
 const showSettings = ref(false);
 const showShare = ref(false);
 const showHint = ref(false);
+const hideIdioms = ref(false);
 
 const MAX_ATTEMPTS = 10;
 
@@ -521,10 +522,13 @@ const showCompletionDialog = () => {
                 <h2 v-else>恭喜你完成了所有挑战！</h2>
 
                 <div v-if="customMode.isActive.value" class="results-summary">
+                    <button @click="hideIdioms = !hideIdioms" class="toggle-idioms-btn" :class="{ active: hideIdioms }">
+                        {{ hideIdioms ? '👁 显示题目' : '🕶 隐藏题目' }}
+                    </button>
                     <div v-for="(result, index) in customMode.results.value" :key="index" class="result-item">
                         <div class="result-header">
                             <span class="result-number">第{{ index + 1 }}题</span>
-                            <span class="result-idiom">{{ result.idiom }}</span>
+                            <span class="result-idiom">{{ hideIdioms ? '****' : result.idiom }}</span>
                             <span :class="['result-status', result.won ? 'success' : 'failed']">
                                 {{ result.won ? '✅' : '❌' }}
                             </span>
@@ -702,7 +706,7 @@ h1 {
     gap: 10px;
 }
 
-input {
+.input-row input {
     width: 200px;
     padding: 10px;
     font-size: 16px;
@@ -870,6 +874,30 @@ button:hover {
     display: flex;
     justify-content: space-around;
     font-size: 16px;
+}
+
+.toggle-idioms-btn {
+    margin-bottom: 15px;
+    padding: 8px 16px;
+    font-size: 14px;
+    background: transparent;
+    color: #666;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.toggle-idioms-btn:hover {
+    background: #f5f5f5;
+    border-color: #00bcd4;
+    color: #00bcd4;
+}
+
+.toggle-idioms-btn.active {
+    background: #00bcd4;
+    color: white;
+    border-color: #00bcd4;
 }
 
 @keyframes fadeIn {
