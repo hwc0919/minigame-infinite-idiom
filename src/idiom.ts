@@ -62,9 +62,9 @@ export const decryptIdiom = (encoded: string): string => {
 
 export const parseIdiom = (idiom: string): CharWithPinyin[] => {
     const chars = idiom.split('');
-    const initials = pinyin(idiom, { pattern: 'initial', type: 'array' }) as string[];
-    const finals = pinyin(idiom, { pattern: 'final', toneType: 'none', type: 'array' }) as string[];
-    const toneNums = pinyin(idiom, { pattern: 'num', type: 'array' }) as (string | undefined)[];
+    const initials = pinyin(idiom, { pattern: 'initial', type: 'array', toneSandhi: false }) as string[];
+    const finals = pinyin(idiom, { pattern: 'final', toneType: 'none', type: 'array', toneSandhi: false }) as string[];
+    const toneNums = pinyin(idiom, { pattern: 'num', type: 'array', toneSandhi: false }) as (string | undefined)[];
 
     return chars.map((char, index) => ({
         char,
