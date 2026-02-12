@@ -242,6 +242,16 @@ const initGame = async () => {
             const quizId = await generateQuizId(encrypted);
 
             await customMode.init(idiomsList, quizId, isShared);
+
+            // 分享模式下，从常规 history 加载记录
+            if (isShared) {
+                const idiom = idiomsList[0]!;
+                const history = guessedHistory.value[idiom];
+                if (history) {
+                    customMode.updateCurrentResult(history.guesses, history.won, history.usedTime);
+                }
+            }
+
             const currentResult = customMode.results.value[customMode.currentIndex.value];
             answer.value = customMode.currentIdiom.value!;
             guesses.value = currentResult?.guesses || [];
